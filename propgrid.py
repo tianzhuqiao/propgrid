@@ -1,5 +1,6 @@
 import sys
 import traceback
+import json
 import six
 import wx
 import wx.py.dispatcher as dp
@@ -899,16 +900,16 @@ class PropSettings(wx.Dialog):
             pp.SetValueTip(tip)
             pp.SetControlStyle(ctrl)
             if name == 'ctrl_type':
-                choices = {'default':'1', 'none':'2', 'editbox':'3', 'combobox':'4',
+                choices = {'default':PROP_CTRL_DEFAULT, 'none':PROP_CTRL_NONE,
+                           'editbox':PROP_CTRL_EDIT, 'combobox':PROP_CTRL_COMBO,
                            #'select file button':5, 'select folder button':6,
-                           'slider':'7', 'spin':'8', 'checkbox':'9', 'radio button':'10',
-                           'colorpicker':'11'}
+                           'slider':PROP_CTRL_SLIDER, 'spin':PROP_CTRL_SPIN,
+                           'checkbox':PROP_CTRL_CHECK, 'radio button':PROP_CTRL_RADIO,
+                           'colorpicker':PROP_CTRL_COLOR}
                 pp.SetChoices(choices)
-                print(v, type(v))
                 pp.SetValue(v)
-                print(pp.GetDescription())
-            if name in ['choiceList', 'valueList']:
-                pp.SetValue(';'.join(v))
+            if name in ['choices']:
+                pp.SetValue(json.dumps(v))
             elif ctrl == PROP_CTRL_CHECK:
                 pp.SetValue(str(v+0))
                 pp.SetDescription(str(v))
@@ -920,7 +921,7 @@ class PropSettings(wx.Dialog):
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
             elif ctrl in [PROP_CTRL_SPIN, PROP_CTRL_SLIDER]:
-                pp.SetRange(2**31-1, -2**31)
+                pp.SetRange(-2**31-1, 2**31)
                 pp.SetValue(str(v))
             else:
                 pp.SetValue(str(v))
@@ -956,7 +957,7 @@ class PropSettings(wx.Dialog):
         for (name, _, _, ctrl) in self.items:
             v = self.propgrid.GetProperty(name)
             if name in ['choices']:
-                setattr(self.prop, name, v.GetValue().split(';'))
+                self.prop.SetChoices(json.loads(v.GetValue()))
             elif ctrl == PROP_CTRL_CHECK:
                 setattr(self.prop, name, bool(int(v.GetValue())))
             elif name == 'ctrl_type':

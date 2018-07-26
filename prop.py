@@ -107,7 +107,6 @@ class Property(object):
         self.radio_rc = wx.Rect(0, 0, 0, 0)
         self.splitter_rc = wx.Rect(0, 0, 0, 0)
         self.label_rc = wx.Rect(0, 0, 0, 0)
-        # rect include everything except the splitter and value
         self.value_rc = wx.Rect(0, 0, 0, 0)
         self.show_label_tips = False
         self.show_value_tips = False
@@ -169,8 +168,8 @@ class Property(object):
         if self.separator == sep:
             return
         self.separator = sep
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def GetSeparator(self):
         """return true if the property is a separator"""
@@ -212,9 +211,9 @@ class Property(object):
         self.choices = {}
         # dict, split the key and value
         if isinstance(choices, dict):
-            self.choices = {str(k): v for k, v in six.iteritems(choices)}
+            self.choices = {str(k): str(v) for k, v in six.iteritems(choices)}
         elif isinstance(choices, list):
-            self.choices = {str(v):v for v in choices}
+            self.choices = {str(v):str(v) for v in choices}
         else:
             return False
         return True
@@ -224,24 +223,24 @@ class Property(object):
         if self.enable == enable:
             return
         self.enable = enable
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetName(self, name, silent=False):
         """set the name"""
         if self.name == name:
             return
         self.name = name
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetLabel(self, label, silent=False):
         """set the label"""
         if self.label == label:
             return
         self.label = label
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetLabelTip(self, tip):
         """set the label tip"""
@@ -252,16 +251,16 @@ class Property(object):
         if self.description == description:
             return
         self.description = description
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetItalicText(self, italic, silent=False):
         """turn on/of the italic text"""
         if self.italic == italic:
             return
         self.italic = italic
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetVisible(self, visible, silent=False):
         """
@@ -273,7 +272,7 @@ class Property(object):
             return
         self.visible = visible
         if not silent:
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+            self.Refresh(True)
 
     def SetParent(self, prop):
         """set the parent property"""
@@ -292,9 +291,11 @@ class Property(object):
 
     def SetShowCheck(self, show, silent=True):
         """show/hide radio button"""
+        if self.show_check == show:
+            return
         self.show_check = show
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def GetCtrlStyle(self):
         """return the control type"""
@@ -406,10 +407,6 @@ class Property(object):
     def GetTitleWidth(self):
         """return the width"""
         return self.title_width
-
-    def Refresh(self):
-        """notify the parent to redraw the property"""
-        self.SendPropEvent(wxEVT_PROP_REFRESH)
 
     def DrawGripper(self, dc):
         # draw gripper
@@ -577,13 +574,13 @@ class Property(object):
 
         self.expander_rc = wx.Rect(*rc)
         self.expander_rc.x = x + MARGIN_X
-        w, _ = self.imgExpColp.GetSize()
+        w, _ = self.imgExpColp.GetSize(0)
         self.expander_rc.SetWidth(w+2)
         x = self.expander_rc.right
 
         self.radio_rc = wx.Rect(*rc)
         self.radio_rc.x = x + MARGIN_X
-        w, _ = self.imgRadio.GetSize()
+        w, _ = self.imgRadio.GetSize(0)
         self.radio_rc.SetWidth(w+2)
         x = self.radio_rc.right
 
@@ -682,7 +679,7 @@ class Property(object):
     def OnTextEnter(self):
         self.UpdatePropValue()
         self.DestroyControl()
-        self.SendPropEvent(wxEVT_PROP_REFRESH)
+        self.Refresh()
 
     def CreateControl(self):
         """create the control"""
@@ -756,7 +753,7 @@ class Property(object):
         if win:
             self.window = win
             # the window size may be large than the value rect
-            self.SendPropEvent(wxEVT_PROP_RESIZE)
+            self.Resize()
             self.LayoutControl()
             self.window.SetFocus()
             self.window.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
@@ -792,6 +789,7 @@ class Property(object):
             self.window.Show(False)
             self.window.Destroy()
             self.window = None
+            self.Resize()
             return True
         return False
 
@@ -897,10 +895,19 @@ class Property(object):
             return not evt.GetVeto()
         return False
 
-    def SetClientRect(self, rcClient):
+    def Resize(self):
+        """notify parent grid the size needs to be updated"""
+        self.SendPropEvent(wxEVT_PROP_RESIZE)
+
+    def Refresh(self, force=False):
+        """notify the parent to redraw the property"""
+        if self.GetVisible() or force:
+            self.SendPropEvent(wxEVT_PROP_REFRESH)
+
+    def SetClientRect(self, rc):
         """set the client rect"""
-        if self.client_rc != rcClient:
-            self.client_rc = wx.Rect(*rcClient)
+        if self.client_rc != rc:
+            self.client_rc = wx.Rect(*rc)
             self.PrepareDrawRect()
             self.LayoutControl()
 
@@ -909,7 +916,7 @@ class Property(object):
         if self.min_size != size:
             self.min_size = wx.Size(*size)
             if not silent:
-                self.SendPropEvent(wxEVT_PROP_RESIZE)
+                self.Resize()
 
     def GetClientRect(self):
         """return the client rect"""
@@ -934,8 +941,8 @@ class Property(object):
             self.DestroyControl()
             self.value = str(value)
             self.UpdateDescription()
-            if not silent and self.GetVisible():
-                self.SendPropEvent(wxEVT_PROP_REFRESH)
+            if not silent:
+                self.Refresh()
             return True
         return False
 
@@ -997,8 +1004,8 @@ class Property(object):
         """set the property to readonly"""
         if readonly != self.GetReadOnly():
             self.readonly = readonly
-            if not silent and self.GetVisible():
-                self.SendPropEvent(wxEVT_PROP_REFRESH)
+            if not silent:
+                self.Refresh()
 
     def SetChecked(self, check, silent=False):
         """check/uncheck the radio button"""
@@ -1006,8 +1013,8 @@ class Property(object):
             self.checked = check
             if not self.SendPropEvent(wxEVT_PROP_CLICK_CHECK):
                 self.checked = not check
-            if not silent and self.GetVisible():
-                self.SendPropEvent(wxEVT_PROP_REFRESH)
+            if not silent:
+                self.Refresh()
 
     def SetGripperColor(self, clr=None):
         self.gripper_clr = clr
@@ -1029,8 +1036,8 @@ class Property(object):
         self.text_clr_disabled = clr_disabled
         if not self.text_clr_disabled:
             self.text_clr_disabled = wx.LIGHT_GREY.GetAsString(wx.C2S_HTML_SYNTAX)
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def SetBgColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=False):
         """
@@ -1045,12 +1052,12 @@ class Property(object):
             self.bg_clr = GetColour(wx.SYS_COLOUR_WINDOW).GetAsString(wx.C2S_HTML_SYNTAX)
         self.bg_clr_sel = clr_sel
         if not self.bg_clr_sel:
-            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_MENUHILIGHT).GetAsString(wx.C2S_HTML_SYNTAX)
+            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_HIGHLIGHT).GetAsString(wx.C2S_HTML_SYNTAX)
         self.bg_clr_disabled = clr_disabled
         if not self.bg_clr_disabled:
             self.bg_clr_disabled = GetColour(wx.SYS_COLOUR_3DFACE).GetAsString(wx.C2S_HTML_SYNTAX)
-        if not silent and self.GetVisible():
-            self.SendPropEvent(wxEVT_PROP_REFRESH)
+        if not silent:
+            self.Refresh()
 
     def GetShowLabelTips(self):
         """return whether label tooltip is allowed"""
