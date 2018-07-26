@@ -170,7 +170,7 @@ class Property(object):
     def GetData(self):
         return self.data
 
-    def SetSeparator(self, sep, silent=False):
+    def SetSeparator(self, sep=True, silent=False):
         """set the property to be a separator"""
         if self.separator == sep:
             return
@@ -178,7 +178,7 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def GetSeparator(self):
+    def IsSeparator(self):
         """return true if the property is a separator"""
         return self.separator
 
@@ -205,6 +205,10 @@ class Property(object):
         self.UpdateDescription()
         return True
 
+    def GetControlStyle(self):
+        """return the control type"""
+        return self.ctrl_type
+
     def SetChoices(self, choices):
         """set the choices list
         choices:
@@ -224,13 +228,21 @@ class Property(object):
         self.UpdateDescription()
         return True
 
-    def SetEnable(self, enable, silent=False):
+    def GetChoices(self):
+        """return the choices list"""
+        return dict(self.choices)
+
+    def Enable(self, enable=True, silent=False):
         """enable/disable the property"""
         if self.enable == enable:
             return
         self.enable = enable
         if not silent:
             self.Refresh()
+
+    def IsEnabled(self):
+        """return true if the property is enabled"""
+        return self.enable
 
     def SetName(self, name, silent=False):
         """set the name"""
@@ -240,6 +252,10 @@ class Property(object):
         if not silent:
             self.Refresh()
 
+    def GetName(self):
+        """get the name"""
+        return self.name
+
     def SetLabel(self, label, silent=False):
         """set the label"""
         if self.label == label:
@@ -248,9 +264,19 @@ class Property(object):
         if not silent:
             self.Refresh()
 
+    def GetLabel(self):
+        """get the label"""
+        return self.label
+
     def SetLabelTip(self, tip):
         """set the label tip"""
         self.label_tip = tip
+
+    def GetLabelTip(self):
+        """get the label tip"""
+        if self.label_tip:
+            return self.label_tip
+        return self.GetName()
 
     def SetDescription(self, description, silent=False):
         """set the description"""
@@ -260,7 +286,11 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def SetItalic(self, italic, silent=False):
+    def GetDescription(self):
+        """get the description"""
+        return self.description
+
+    def Italic(self, italic=True, silent=False):
         """turn on/of the italic text"""
         if self.italic == italic:
             return
@@ -268,7 +298,11 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def SetVisible(self, visible, silent=False):
+    def IsItalic(self):
+        "return true if the italic is used for drawing"
+        return self.italic
+
+    def SetVisible(self, visible=True, silent=False):
         """
         show/hide the property
 
@@ -280,11 +314,19 @@ class Property(object):
         if not silent:
             self.Refresh(True)
 
+    def IsVisible(self):
+        """return true if the property is visible"""
+        return self.visible
+
     def SetParent(self, prop):
         """set the parent property"""
         if prop and prop.GetIndent() >= self.GetIndent():
             return
         self.parent = prop
+
+    def GetParent(self):
+        """return the parent property"""
+        return self.parent
 
     def SetRange(self, minval, maxval):
         """
@@ -295,7 +337,11 @@ class Property(object):
         self.value_max = float(maxval)
         self.value_min = float(minval)
 
-    def SetShowCheck(self, show, silent=True):
+    def GetRange(self):
+        """return the value range"""
+        return (self.value_min, self.value_max)
+
+    def SetShowCheck(self, show=True, silent=True):
         """show/hide radio button"""
         if self.show_check == show:
             return
@@ -303,31 +349,33 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def GetCtrlStyle(self):
-        """return the control type"""
-        return self.ctrl_type
+    def GetShowCheck(self):
+        """return whether the icon is shown"""
+        return self.show_check
 
-    def GetChoices(self):
-        """return the choices list"""
-        return dict(self.choices)
+    def SetChecked(self, check=True, silent=False):
+        """check/uncheck the radio button"""
+        if check != self.IsChecked():
+            self.checked = check
+            if not self.SendPropEvent(wxEVT_PROP_CLICK_CHECK):
+                self.checked = not check
+            if not silent:
+                self.Refresh()
 
-    def IsEnabled(self):
-        """return true if the property is enabled"""
-        return self.enable
+    def IsChecked(self):
+        """return true if the radio button is checked"""
+        return self.checked
 
-    def GetName(self):
-        """get the name"""
-        return self.name
-
-    def GetLabel(self):
-        """get the label"""
-        return self.label
-
-    def GetLabelTip(self):
-        """get the label tip"""
-        if self.label_tip:
-            return self.label_tip
-        return self.GetName()
+    def SetValue(self, value, silent=False):
+        """set the value"""
+        if self.value != str(value):
+            self.DestroyControl()
+            self.value = str(value)
+            self.UpdateDescription()
+            if not silent:
+                self.Refresh()
+            return True
+        return False
 
     def GetValue(self):
         """get the value"""
@@ -337,70 +385,142 @@ class Property(object):
         """get the value as string"""
         return str(self.value)
 
+    def SetValueTip(self, tip):
+        """set the value tip"""
+        self.value_tip = tip
+
     def GetValueTip(self):
         """get the valuetip"""
         if self.value_tip:
             return self.value_tip
         return self.value
 
-    def GetDescription(self):
-        """get the description"""
-        return self.description
+    def SetIndent(self, indent, silent=False):
+        """set the indent to a positive integer"""
+        if indent < 0:
+            indent = 0
+        if indent == self.indent:
+            return
+        self.indent = indent
+        if not silent:
+            self.SendPropEvent(wxEVT_PROP_INDENT)
 
     def GetIndent(self):
         """get the indent"""
         return self.indent
 
+    def SetExpand(self, expand=True, silent=False):
+        """expand/collapse the children"""
+        if not self.HasChildren():
+            return
+        if expand == self.expanded:
+            return
+        self.expanded = expand
+        if silent:
+            return
+        if self.expanded:
+            evt = wxEVT_PROP_EXPANDED
+        else:
+            evt = wxEVT_PROP_COLLAPSED
+        if not silent:
+            self.SendPropEvent(evt)
+
     def IsExpanded(self):
         """return true if the expand/collapse button is expanded"""
         return self.expanded
+
+    def SetHasChildren(self, haschildren, silent=False):
+        """Indicate that the property has children"""
+        if haschildren == self.has_children:
+            return
+        self.has_children = haschildren
+        if silent:
+            return
+        if self.expanded:
+            evt = wxEVT_PROP_EXPANDED
+        else:
+            evt = wxEVT_PROP_COLLAPSED
+        self.SendPropEvent(evt)
 
     def HasChildren(self):
         """return true if the property has children"""
         return self.has_children
 
-    def IsChecked(self):
-        """return true if the radio button is checked"""
-        return self.checked
+    def SetActivated(self, activated=True):
+        """activate the property"""
+        if activated == self.activated:
+            return
+        self.activated = activated
+        if not activated:
+            # destroy the control if the property is inactivated
+            self.OnTextEnter()
+        else:
+            self.SendPropEvent(wxEVT_PROP_SELECTED)
 
-    def IsItalic(self):
-        "return true if the italic is used for drawing"
-        return self.italic
-
-    def GetControlStyle(self):
-        """get the control type"""
-        return self.ctrl_type
-
-    def GetActivated(self):
+    def IsActivated(self):
         """return true if the property is activated"""
         return self.activated
 
-    def IsVisible(self):
-        """return true if the property is visible"""
-        return self.visible
+    def SetReadonly(self, readonly=True, silent=False):
+        """set the property to readonly"""
+        if readonly != self.IsReadonly():
+            self.readonly = readonly
+            if not silent:
+                self.Refresh()
 
-    def GetParent(self):
-        """return the parent property"""
-        return self.parent
-
-    def GetRange(self):
-        """return the value range"""
-        return (self.value_min, self.value_max)
-
-    def GetReadonly(self):
+    def IsReadonly(self):
         """return true if the property is readonly"""
         return self.readonly
 
-    def GetShowCheck(self):
-        """return whether the icon is shown"""
-        return self.show_check
+    def SetGripperColor(self, clr=None):
+        self.gripper_clr = clr
 
     def GetGripperColor(self):
         return self.gripper_clr
 
+    def SetTextColor(self, clr=None, clr_sel=None, clr_disabled=None,
+                     silent=False):
+        """
+        set the text colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        self.text_clr = clr
+        if not self.text_clr:
+            self.text_clr = wx.BLACK.GetAsString(wx.C2S_HTML_SYNTAX)
+        self.text_clr_sel = clr_sel
+        if not self.text_clr_sel:
+            self.text_clr_sel = wx.WHITE.GetAsString(wx.C2S_HTML_SYNTAX)
+        self.text_clr_disabled = clr_disabled
+        if not self.text_clr_disabled:
+            self.text_clr_disabled = wx.LIGHT_GREY.GetAsString(wx.C2S_HTML_SYNTAX)
+        if not silent:
+            self.Refresh()
+
     def GetTextColor(self):
         """get the text colors"""
         return (self.text_clr, self.text_clr_sel, self.text_clr_disabled)
+
+    def SetBgColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=False):
+        """
+        set the background colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        GetColour = wx.SystemSettings.GetColour
+        self.bg_clr = clr
+        if not self.bg_clr:
+            self.bg_clr = GetColour(wx.SYS_COLOUR_WINDOW).GetAsString(wx.C2S_HTML_SYNTAX)
+        self.bg_clr_sel = clr_sel
+        if not self.bg_clr_sel:
+            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_HIGHLIGHT).GetAsString(wx.C2S_HTML_SYNTAX)
+        self.bg_clr_disabled = clr_disabled
+        if not self.bg_clr_disabled:
+            self.bg_clr_disabled = GetColour(wx.SYS_COLOUR_3DFACE).GetAsString(wx.C2S_HTML_SYNTAX)
+        if not silent:
+            self.Refresh()
 
     def GetBgColor(self):
         """get the background colors"""
@@ -413,6 +533,45 @@ class Property(object):
     def GetTitleWidth(self):
         """return the width"""
         return self.title_width
+
+    def SetClientRect(self, rc):
+        """set the client rect"""
+        if self.client_rc != rc:
+            self.client_rc = wx.Rect(*rc)
+            self.PrepareDrawRect()
+            self.LayoutControl()
+
+    def GetClientRect(self):
+        """return the client rect"""
+        return wx.Rect(*self.client_rc)
+
+    def SetMinSize(self, size, silent=False):
+        """set the min size"""
+        if self.min_size != size:
+            self.min_size = wx.Size(*size)
+            if not silent:
+                self.Resize()
+
+    def GetMinSize(self):
+        """return the min size"""
+        if self.window:
+            size = self.window.GetSize()
+            sz = self.min_size
+            size.y = max(sz.y, size.y+2)
+            return size
+        return wx.Size(*self.min_size)
+
+    def GetSize(self):
+        """return the current size"""
+        return self.client_rc.GetSize()
+
+    def GetShowLabelTips(self):
+        """return whether label tooltip is allowed"""
+        return self.show_label_tips
+
+    def GetShowValueTips(self):
+        """return whether value tooltip is allowed"""
+        return self.show_value_tips
 
     def DrawGripper(self, dc):
         # draw gripper
@@ -437,7 +596,7 @@ class Property(object):
                 state = 1
             elif self.IsChecked():
                 state = 2
-                if self.GetActivated():
+                if self.IsActivated():
                     state = 3
 
             if self.img_check.GetImageCount() == 4:
@@ -477,7 +636,7 @@ class Property(object):
         if self.window is None:
             crbg = self.bg_clr
             crtxt = wx.BLACK
-            if not self.enable or self.GetReadonly():
+            if not self.enable or self.IsReadonly():
                 crtxt = self.text_clr_disabled
                 crbg = self.bg_clr_disabled
             elif self.activated:
@@ -559,7 +718,7 @@ class Property(object):
         self.DrawLabel(dc)
 
         # separator does not have radio button, splitter bar and value sections
-        if self.GetSeparator():
+        if self.IsSeparator():
             return
 
         self.DrawCheck(dc)
@@ -637,7 +796,7 @@ class Property(object):
         elif ht == PROP_HIT_SPLITTER or ht == PROP_HIT_NONE:
             self.UpdatePropValue()
             self.DestroyControl()
-        elif not self.GetReadonly() and ht == PROP_HIT_VALUE:
+        elif not self.IsReadonly() and ht == PROP_HIT_VALUE:
             self.CreateControl()
         return ht
 
@@ -655,7 +814,7 @@ class Property(object):
 
         if self.IsEnabled():
             if ht == PROP_HIT_VALUE:
-                if not self.GetReadonly():
+                if not self.IsReadonly():
                     self.CreateControl()
 
             elif ht == PROP_HIT_EXPAND:
@@ -688,7 +847,7 @@ class Property(object):
 
     def CreateControl(self):
         """create the control"""
-        if self.window != None or self.GetSeparator():
+        if self.window != None or self.IsSeparator():
             return
         self.PreparePropValidator()
         style = self.ctrl_type
@@ -924,168 +1083,6 @@ class Property(object):
         if self.IsVisible() or force:
             self.SendPropEvent(wxEVT_PROP_REFRESH)
 
-    def SetClientRect(self, rc):
-        """set the client rect"""
-        if self.client_rc != rc:
-            self.client_rc = wx.Rect(*rc)
-            self.PrepareDrawRect()
-            self.LayoutControl()
-
-    def SetMinSize(self, size, silent=False):
-        """set the min size"""
-        if self.min_size != size:
-            self.min_size = wx.Size(*size)
-            if not silent:
-                self.Resize()
-
-    def GetClientRect(self):
-        """return the client rect"""
-        return wx.Rect(*self.client_rc)
-
-    def GetSize(self):
-        """return the current size"""
-        return self.client_rc.GetSize()
-
-    def GetMinSize(self):
-        """return the min size"""
-        if self.window:
-            size = self.window.GetSize()
-            sz = self.min_size
-            size.y = max(sz.y, size.y+2)
-            return size
-        return wx.Size(*self.min_size)
-
-    def SetValue(self, value, silent=False):
-        """set the value"""
-        if self.value != str(value):
-            self.DestroyControl()
-            self.value = str(value)
-            self.UpdateDescription()
-            if not silent:
-                self.Refresh()
-            return True
-        return False
-
-    def SetValueTip(self, tip):
-        """set the value tip"""
-        self.value_tip = tip
-
-    def SetIndent(self, indent, silent=False):
-        """set the indent to a positive integer"""
-        if indent < 0:
-            indent = 0
-        if indent == self.indent:
-            return
-        self.indent = indent
-        if not silent:
-            self.SendPropEvent(wxEVT_PROP_INDENT)
-
-    def SetExpand(self, expand, silent=False):
-        """expand/collapse the children"""
-        if not self.HasChildren():
-            return
-        if expand == self.expanded:
-            return
-        self.expanded = expand
-        if silent:
-            return
-        if self.expanded:
-            evt = wxEVT_PROP_EXPANDED
-        else:
-            evt = wxEVT_PROP_COLLAPSED
-        if not silent:
-            self.SendPropEvent(evt)
-
-    def SetHasChildren(self, haschildren, silent=False):
-        """Indicate that the property has children"""
-        if haschildren == self.has_children:
-            return
-        self.has_children = haschildren
-        if silent:
-            return
-        if self.expanded:
-            evt = wxEVT_PROP_EXPANDED
-        else:
-            evt = wxEVT_PROP_COLLAPSED
-        self.SendPropEvent(evt)
-
-    def SetActivated(self, activated):
-        """activate the property"""
-        if activated == self.activated:
-            return
-        self.activated = activated
-        if not activated:
-            # destroy the control if the property is inactivated
-            self.OnTextEnter()
-        else:
-            self.SendPropEvent(wxEVT_PROP_SELECTED)
-
-    def SetReadonly(self, readonly, silent=False):
-        """set the property to readonly"""
-        if readonly != self.GetReadonly():
-            self.readonly = readonly
-            if not silent:
-                self.Refresh()
-
-    def SetChecked(self, check, silent=False):
-        """check/uncheck the radio button"""
-        if check != self.IsChecked():
-            self.checked = check
-            if not self.SendPropEvent(wxEVT_PROP_CLICK_CHECK):
-                self.checked = not check
-            if not silent:
-                self.Refresh()
-
-    def SetGripperColor(self, clr=None):
-        self.gripper_clr = clr
-
-    def SetTextColor(self, clr=None, clr_sel=None, clr_disabled=None,
-                     silent=False):
-        """
-        set the text colors
-
-        All values are string. If the value is None, the color will reset to
-        default.
-        """
-        self.text_clr = clr
-        if not self.text_clr:
-            self.text_clr = wx.BLACK.GetAsString(wx.C2S_HTML_SYNTAX)
-        self.text_clr_sel = clr_sel
-        if not self.text_clr_sel:
-            self.text_clr_sel = wx.WHITE.GetAsString(wx.C2S_HTML_SYNTAX)
-        self.text_clr_disabled = clr_disabled
-        if not self.text_clr_disabled:
-            self.text_clr_disabled = wx.LIGHT_GREY.GetAsString(wx.C2S_HTML_SYNTAX)
-        if not silent:
-            self.Refresh()
-
-    def SetBgColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=False):
-        """
-        set the background colors
-
-        All values are string. If the value is None, the color will reset to
-        default.
-        """
-        GetColour = wx.SystemSettings.GetColour
-        self.bg_clr = clr
-        if not self.bg_clr:
-            self.bg_clr = GetColour(wx.SYS_COLOUR_WINDOW).GetAsString(wx.C2S_HTML_SYNTAX)
-        self.bg_clr_sel = clr_sel
-        if not self.bg_clr_sel:
-            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_HIGHLIGHT).GetAsString(wx.C2S_HTML_SYNTAX)
-        self.bg_clr_disabled = clr_disabled
-        if not self.bg_clr_disabled:
-            self.bg_clr_disabled = GetColour(wx.SYS_COLOUR_3DFACE).GetAsString(wx.C2S_HTML_SYNTAX)
-        if not silent:
-            self.Refresh()
-
-    def GetShowLabelTips(self):
-        """return whether label tooltip is allowed"""
-        return self.show_label_tips
-
-    def GetShowValueTips(self):
-        """return whether value tooltip is allowed"""
-        return self.show_value_tips
 
 class PropertyEvent(wx.PyCommandEvent):
     def __init__(self, commandType, id=0):

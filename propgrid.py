@@ -490,7 +490,7 @@ class PropGrid(wx.ScrolledWindow):
         menu = wx.Menu()
         menu.Append(self.ID_PROP_GRID_ADD_SEP, "&Add separator")
         menu.AppendCheckItem(self.ID_PROP_GRID_READ_ONLY, "&Read only")
-        menu.Check(self.ID_PROP_GRID_READ_ONLY, prop.GetReadonly())
+        menu.Check(self.ID_PROP_GRID_READ_ONLY, prop.IsReadonly())
 
         menu.AppendSeparator()
         menu.Append(self.ID_PROP_GRID_INDENT_INS, "Increase Indent\tCtrl-Right")
@@ -528,7 +528,7 @@ class PropGrid(wx.ScrolledWindow):
         if eid == self.ID_PROP_GRID_DELETE:
             self.DeleteProperty(prop)
         elif eid == self.ID_PROP_GRID_READ_ONLY:
-            prop.SetReadonly(not prop.GetReadonly())
+            prop.SetReadonly(not prop.IsReadonly())
         elif eid == self.ID_PROP_GRID_PROP:
             dlg = PropSettings(self, prop)
             if dlg.ShowModal() == wx.ID_OK:
