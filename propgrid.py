@@ -528,7 +528,7 @@ class PropGrid(wx.ScrolledWindow):
         if eid == self.ID_PROP_GRID_DELETE:
             self.DeleteProperty(prop)
         elif eid == self.ID_PROP_GRID_READ_ONLY:
-            prop.SetReadOnly(not prop.GetReadonly())
+            prop.SetReadonly(not prop.GetReadonly())
         elif eid == self.ID_PROP_GRID_PROP:
             dlg = PropSettings(self, prop)
             if dlg.ShowModal() == wx.ID_OK:

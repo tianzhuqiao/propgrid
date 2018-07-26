@@ -110,6 +110,7 @@ class Property(object):
         self.show_label_tips = False
         self.show_value_tips = False
         self.separator = False
+        self.data = None
         #self.m_validate = wx.FILTER_NONE
         #self.m_nValidateType(VALIDATE_NONE)
         if type(self).img_check is None or type(self).img_expand is None:
@@ -152,6 +153,7 @@ class Property(object):
         p.show_label_tips = self.show_label_tips
         p.show_value_tips = self.show_value_tips
         p.separator = self.separator
+        p.data = self.data
         return p
 
     def SetGrid(self, grid):
@@ -161,6 +163,12 @@ class Property(object):
     def GetGrid(self):
         """return the grid window"""
         return self.grid
+
+    def SetData(self, data):
+        self.data = data
+
+    def GetData(self):
+        return self.data
 
     def SetSeparator(self, sep, silent=False):
         """set the property to be a separator"""
@@ -1012,7 +1020,7 @@ class Property(object):
         else:
             self.SendPropEvent(wxEVT_PROP_SELECTED)
 
-    def SetReadOnly(self, readonly, silent=False):
+    def SetReadonly(self, readonly, silent=False):
         """set the property to readonly"""
         if readonly != self.GetReadonly():
             self.readonly = readonly
