@@ -395,7 +395,7 @@ class PropGrid(wx.ScrolledWindow):
                 break
 
             prop = self._props[activated]
-            if prop.GetVisible():
+            if prop.IsVisible():
                 self.SelectProperty(activated)
                 self.EnsureVisible(activated)
                 break
@@ -404,7 +404,7 @@ class PropGrid(wx.ScrolledWindow):
         """find the property under the mouse"""
         for i, prop in enumerate(self._props):
             prop = self._props[i]
-            if  not prop.GetVisible():
+            if  not prop.IsVisible():
                 continue
             if prop.GetClientRect().Contains(pt):
                 return i
@@ -418,7 +418,7 @@ class PropGrid(wx.ScrolledWindow):
         self.CheckProp()
         # calculate the width and height
         for p in self._props:
-            if p.GetVisible():
+            if p.IsVisible():
                 sz = p.GetMinSize()
                 w = max(w, sz.x)
                 h = h + sz.y
@@ -430,7 +430,7 @@ class PropGrid(wx.ScrolledWindow):
         rc = self.GetClientRect()
         (w, h) = (max(w, rc.width), 1)
         for p in self._props:
-            if p.GetVisible():
+            if p.IsVisible():
                 hh = p.GetMinSize().y
                 rc = wx.Rect(0, h, w, hh)
                 p.SetClientRect(rc)
@@ -472,7 +472,7 @@ class PropGrid(wx.ScrolledWindow):
                 show = True
             else:
                 # prop with parent depends on parent's status
-                show = parent.IsExpanded() and parent.GetVisible()
+                show = parent.IsExpanded() and parent.IsVisible()
             prop.SetVisible(show)
 
     def OnPropRefresh(self, evt):
@@ -490,7 +490,7 @@ class PropGrid(wx.ScrolledWindow):
         menu = wx.Menu()
         menu.Append(self.ID_PROP_GRID_ADD_SEP, "&Add separator")
         menu.AppendCheckItem(self.ID_PROP_GRID_READ_ONLY, "&Read only")
-        menu.Check(self.ID_PROP_GRID_READ_ONLY, prop.GetReadOnly())
+        menu.Check(self.ID_PROP_GRID_READ_ONLY, prop.GetReadonly())
 
         menu.AppendSeparator()
         menu.Append(self.ID_PROP_GRID_INDENT_INS, "Increase Indent\tCtrl-Right")
@@ -528,7 +528,7 @@ class PropGrid(wx.ScrolledWindow):
         if eid == self.ID_PROP_GRID_DELETE:
             self.DeleteProperty(prop)
         elif eid == self.ID_PROP_GRID_READ_ONLY:
-            prop.SetReadOnly(not prop.GetReadOnly())
+            prop.SetReadOnly(not prop.GetReadonly())
         elif eid == self.ID_PROP_GRID_PROP:
             dlg = PropSettings(self, prop)
             if dlg.ShowModal() == wx.ID_OK:
@@ -611,7 +611,7 @@ class PropGrid(wx.ScrolledWindow):
 
         # draw the properties
         for p in self._props:
-            if not p.GetVisible():
+            if not p.IsVisible():
                 continue
             rc_prop = p.GetClientRect()
             if rc.Intersects(rc_prop):
@@ -647,19 +647,19 @@ class PropGrid(wx.ScrolledWindow):
             self.prop_under_mouse = prop
             self.CaptureMouse()
             self.resize_mode = self.RESIZE_NONE
-            if ht == Property.PROP_HIT_SPLITTER:
+            if ht == PROP_HIT_SPLITTER:
                 # drag the splitter
                 self.resize_mode = self.RESIZE_SEP
-            elif ht == Property.PROP_HIT_EDGE_BOTTOM:
+            elif ht == PROP_HIT_EDGE_BOTTOM:
                 # drag the bottom edge
                 self.resize_mode = self.RESIZE_BOT
-            elif ht == Property.PROP_HIT_EDGE_TOP:
+            elif ht == PROP_HIT_EDGE_TOP:
                 # drag the bottom edge of the property above
                 if index > 0:
                     index = index-1
                     self.prop_under_mouse = self.GetProperty(index)
                     self.resize_mode = self.RESIZE_BOT
-            elif ht == Property.PROP_HIT_TITLE:
+            elif ht == PROP_HIT_TITLE:
                 # start drag & drop
                 PropGrid.drag_start = self.ClientToScreen(pt)
                 PropGrid.drag_prop = prop
@@ -769,21 +769,21 @@ class PropGrid(wx.ScrolledWindow):
                     ht = prop.OnMouseMove(pt)
 
                     # change the cursor icon
-                    if ht == Property.PROP_HIT_SPLITTER:
+                    if ht == PROP_HIT_SPLITTER:
                         mode = self.CURSOR_RESIZE_HORZ
-                    elif ht == Property.PROP_HIT_EDGE_BOTTOM:
+                    elif ht == PROP_HIT_EDGE_BOTTOM:
                         mode = self.CURSOR_RESIZE_VERT
-                    elif ht == Property.PROP_HIT_EDGE_TOP:
+                    elif ht == PROP_HIT_EDGE_TOP:
                         if index > 0:
                             mode = self.CURSOR_RESIZE_VERT
                         else:
                             mode = self.CURSOR_STD
                     #if prop.GetShowLabelTips() and ht == Property.PROP_HIT_TITLE:
-                    if ht == Property.PROP_HIT_TITLE:
+                    if ht == PROP_HIT_TITLE:
                         tooltip = prop.GetLabelTip()
-                    elif prop.GetShowValueTips() and ht == Property.PROP_HIT_VALUE:
+                    elif prop.GetShowValueTips() and ht == PROP_HIT_VALUE:
                         tooltip = prop.GetValueTip()
-                    elif ht == Property.PROP_HIT_EXPAND:
+                    elif ht == PROP_HIT_EXPAND:
                         tooltip = prop.GetLabelTip()
                 # set the tooltip
                 if self.GetToolTipText() != tooltip:
@@ -880,7 +880,7 @@ class PropSettings(wx.Dialog):
                           ('enable', 'Enable', '', PROP_CTRL_CHECK),
                           ('italic', 'Italic', '', PROP_CTRL_CHECK),
                           ('readonly', 'Read only', '', PROP_CTRL_CHECK),
-                          ('ctrl_type', 'Control window type', '', PROP_CTRL_COMBO),
+                          ('ctrl_type', 'Control window type', '', PROP_CTRL_CHOICE),
                           ('choices', 'Choice list', 'separate by ";"', PROP_CTRL_EDIT),
                           ('text_clr', 'Normal text color', '', PROP_CTRL_COLOR),
                           ('text_clr_sel', 'Selected text color', '', PROP_CTRL_COLOR),
@@ -900,9 +900,10 @@ class PropSettings(wx.Dialog):
             pp.SetValueTip(tip)
             pp.SetControlStyle(ctrl)
             if name == 'ctrl_type':
-                choices = {'default':PROP_CTRL_DEFAULT, 'none':PROP_CTRL_NONE,
-                           'editbox':PROP_CTRL_EDIT, 'combobox':PROP_CTRL_COMBO,
-                           #'select file button':5, 'select folder button':6,
+                choices = {'none':PROP_CTRL_NONE,
+                           'editbox':PROP_CTRL_EDIT, 'choice':PROP_CTRL_CHOICE,
+                           'select file':PROP_CTRL_FILE_SEL,
+                           'select folder':PROP_CTRL_FOLDER_SEL,
                            'slider':PROP_CTRL_SLIDER, 'spin':PROP_CTRL_SPIN,
                            'checkbox':PROP_CTRL_CHECK, 'radio button':PROP_CTRL_RADIO,
                            'colorpicker':PROP_CTRL_COLOR}

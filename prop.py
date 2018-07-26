@@ -36,10 +36,9 @@ EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 EVT_PROP_CLICK_CHECK = wx.PyEventBinder(wxEVT_PROP_CLICK_CHECK, 1)
 
-PROP_CTRL_DEFAULT = 0
 PROP_CTRL_NONE = 1
 PROP_CTRL_EDIT = 2
-PROP_CTRL_COMBO = 3
+PROP_CTRL_CHOICE = 3
 PROP_CTRL_FILE_SEL = 4
 PROP_CTRL_FOLDER_SEL = 5
 PROP_CTRL_SLIDER = 6
@@ -49,20 +48,20 @@ PROP_CTRL_RADIO = 9
 PROP_CTRL_COLOR = 10
 PROP_CTRL_NUM = 11
 
+PROP_HIT_NONE = 0
+PROP_HIT_EXPAND = 1
+PROP_HIT_CHECK = 2
+PROP_HIT_TITLE = 3
+PROP_HIT_SPLITTER = 4
+PROP_HIT_VALUE = 5
+PROP_HIT_EDGE_BOTTOM = 6
+PROP_HIT_EDGE_TOP = 7
+
 def BitmapFromXPM(xpm):
     xpm_b = [x.encode('utf-8') for x in xpm]
     return wx.Bitmap(xpm_b)
 
 class Property(object):
-    PROP_HIT_NONE = 0
-    PROP_HIT_EXPAND = 1
-    PROP_HIT_CHECK = 2
-    PROP_HIT_TITLE = 3
-    PROP_HIT_SPLITTER = 4
-    PROP_HIT_VALUE = 5
-    PROP_HIT_EDGE_BOTTOM = 6
-    PROP_HIT_EDGE_TOP = 7
-
     VALIDATE_NONE = 0
     VALIDATE_DEC = 1
     VALIDATE_HEX = 2
@@ -70,8 +69,8 @@ class Property(object):
     VALIDATE_BIN = 4
     MARGIN_X = 2
 
-    imgRadio = None
-    imgExpColp = None
+    img_check = None
+    img_expand = None
     def __init__(self, grid, name, label, value):
         self.grid = grid
         self.name = name
@@ -113,11 +112,11 @@ class Property(object):
         self.separator = False
         #self.m_validate = wx.FILTER_NONE
         #self.m_nValidateType(VALIDATE_NONE)
-        if type(self).imgRadio is None or type(self).imgExpColp is None:
-            type(self).imgRadio = wx.ImageList(16, 16, True, 4)
-            type(self).imgExpColp = wx.ImageList(12, 12, True, 2)
-            type(self).imgRadio.Add(BitmapFromXPM(radio_xpm))
-            type(self).imgExpColp.Add(BitmapFromXPM(tree_xpm))
+        if type(self).img_check is None or type(self).img_expand is None:
+            type(self).img_check = wx.ImageList(16, 16, True, 4)
+            type(self).img_expand = wx.ImageList(12, 12, True, 2)
+            type(self).img_check.Add(BitmapFromXPM(radio_xpm))
+            type(self).img_expand.Add(BitmapFromXPM(tree_xpm))
 
     def duplicate(self):
         """
@@ -177,27 +176,25 @@ class Property(object):
 
     def SetControlStyle(self, style):
         """set the control type
-        style: default | none | editbox | combobox | file_sel_button |
+        style: none | editbox | combobox | file_sel_button |
                folder_sel_button | slider | spin | checkbox | radiobox |
                color
         """
         self.UpdatePropValue()
         self.DestroyControl()
-        str_style = {'default':PROP_CTRL_DEFAULT, 'none': PROP_CTRL_NONE,
-                     'editbox': PROP_CTRL_EDIT, 'combobox':PROP_CTRL_COMBO,
-                     'file_sel_button':PROP_CTRL_FILE_SEL,
-                     'folder_sel_button': PROP_CTRL_FOLDER_SEL,
+        str_style = {'none': PROP_CTRL_NONE, 'editbox': PROP_CTRL_EDIT,
+                     'choice':PROP_CTRL_CHOICE,
+                     'file_dialog':PROP_CTRL_FILE_SEL,
+                     'dir_dialog': PROP_CTRL_FOLDER_SEL,
                      'slider': PROP_CTRL_SLIDER, 'spin': PROP_CTRL_SPIN,
                      'checkbox': PROP_CTRL_CHECK, 'radiobox': PROP_CTRL_RADIO,
                      'color': PROP_CTRL_COLOR}
         if isinstance(style, six.string_types):
             style = str_style.get(style, None)
-        if not isinstance(style, int):
+        if style < PROP_CTRL_NONE or style >= PROP_CTRL_NUM:
             return False
-        if style < PROP_CTRL_DEFAULT or style >= PROP_CTRL_NUM:
-            return False
-        if style != PROP_CTRL_DEFAULT:
-            self.ctrl_type = style
+        self.ctrl_type = style
+        self.UpdateDescription()
         return True
 
     def SetChoices(self, choices):
@@ -216,6 +213,7 @@ class Property(object):
             self.choices = {str(v):str(v) for v in choices}
         else:
             return False
+        self.UpdateDescription()
         return True
 
     def SetEnable(self, enable, silent=False):
@@ -254,7 +252,7 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def SetItalicText(self, italic, silent=False):
+    def SetItalic(self, italic, silent=False):
         """turn on/of the italic text"""
         if self.italic == italic:
             return
@@ -276,7 +274,7 @@ class Property(object):
 
     def SetParent(self, prop):
         """set the parent property"""
-        if prop == self:
+        if prop and prop.GetIndent() >= self.GetIndent():
             return
         self.parent = prop
 
@@ -327,6 +325,10 @@ class Property(object):
         """get the value"""
         return self.value
 
+    def GetValueAsString(self):
+        """get the value as string"""
+        return str(self.value)
+
     def GetValueTip(self):
         """get the valuetip"""
         if self.value_tip:
@@ -353,7 +355,7 @@ class Property(object):
         """return true if the radio button is checked"""
         return self.checked
 
-    def IsItalicText(self):
+    def IsItalic(self):
         "return true if the italic is used for drawing"
         return self.italic
 
@@ -365,7 +367,7 @@ class Property(object):
         """return true if the property is activated"""
         return self.activated
 
-    def GetVisible(self):
+    def IsVisible(self):
         """return true if the property is visible"""
         return self.visible
 
@@ -377,13 +379,9 @@ class Property(object):
         """return the value range"""
         return (self.value_min, self.value_max)
 
-    def GetReadOnly(self):
+    def GetReadonly(self):
         """return true if the property is readonly"""
         return self.readonly
-
-    def GetChecked(self):
-        """return true if the radio button is checked"""
-        return self.checked
 
     def GetShowCheck(self):
         """return whether the icon is shown"""
@@ -434,12 +432,11 @@ class Property(object):
                 if self.GetActivated():
                     state = 3
 
-            if type(self).imgRadio.GetImageCount() == 4:
-                (imagex, imagey) = type(self).imgRadio.GetSize(0)
-                x = self.radio_rc.x+(self.radio_rc.width-imagex)/2
-                y = self.radio_rc.y+(self.radio_rc.height-imagey)/2+1
-                type(self).imgRadio.Draw(state, dc, x, y,
-                                         wx.IMAGELIST_DRAW_TRANSPARENT)
+            if self.img_check.GetImageCount() == 4:
+                (w, h) = self.img_check.GetSize(0)
+                x = self.radio_rc.x+(self.radio_rc.width-w)/2
+                y = self.radio_rc.y+(self.radio_rc.height-h)/2+1
+                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
 
     def DrawSplitter(self, dc):
         # draw splitter
@@ -472,7 +469,7 @@ class Property(object):
         if self.window is None:
             crbg = self.bg_clr
             crtxt = wx.BLACK
-            if not self.enable or self.GetReadOnly():
+            if not self.enable or self.GetReadonly():
                 crtxt = self.text_clr_disabled
                 crbg = self.bg_clr_disabled
             elif self.activated:
@@ -502,7 +499,7 @@ class Property(object):
 
     def DrawItem(self, dc):
         """draw the property"""
-        if not self.GetVisible():
+        if not self.IsVisible():
             return
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
@@ -541,14 +538,14 @@ class Property(object):
             dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
 
         if self.HasChildren():
-            if type(self).imgExpColp.GetImageCount() == 2:
-                (imagex, imagey) = type(self).imgExpColp.GetSize(0)
-                x = self.expander_rc.x+(self.expander_rc.width-imagex)/2
-                y = self.expander_rc.y+(self.expander_rc.height-imagey)/2+1
+            if self.img_expand.GetImageCount() == 2:
+                (w, h) = self.img_expand.GetSize(0)
+                x = self.expander_rc.x+(self.expander_rc.width-w)/2
+                y = self.expander_rc.y+(self.expander_rc.height-h)/2+1
                 idx = 0
                 if not self.expanded:
                     idx = 1
-                type(self).imgExpColp.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
+                self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
 
         self.DrawGripper(dc)
         self.DrawLabel(dc)
@@ -574,13 +571,13 @@ class Property(object):
 
         self.expander_rc = wx.Rect(*rc)
         self.expander_rc.x = x + MARGIN_X
-        w, _ = self.imgExpColp.GetSize(0)
+        w, _ = self.img_expand.GetSize(0)
         self.expander_rc.SetWidth(w+2)
         x = self.expander_rc.right
 
         self.radio_rc = wx.Rect(*rc)
         self.radio_rc.x = x + MARGIN_X
-        w, _ = self.imgRadio.GetSize(0)
+        w, _ = self.img_check.GetSize(0)
         self.radio_rc.SetWidth(w+2)
         x = self.radio_rc.right
 
@@ -604,40 +601,35 @@ class Property(object):
         rc = wx.Rect(*self.client_rc)
         rc.SetTop(rc.bottom-2)
         if rc.Contains(pt):
-            return self.PROP_HIT_EDGE_BOTTOM
+            return PROP_HIT_EDGE_BOTTOM
         # top edge
         rc = wx.Rect(*self.client_rc)
         rc.SetBottom(rc.top+2)
         if rc.Contains(pt):
-            return self.PROP_HIT_EDGE_TOP
+            return PROP_HIT_EDGE_TOP
 
         if self.expander_rc.Contains(pt):
-            # expand/collapse icon
-            return self.PROP_HIT_EXPAND
+            return PROP_HIT_EXPAND
         elif self.radio_rc.Contains(pt):
-            # radio icon
-            return self.PROP_HIT_CHECK
+            return PROP_HIT_CHECK
         elif self.label_rc.Contains(pt):
-            # elsewhere on the title
-            return self.PROP_HIT_TITLE
+            return PROP_HIT_TITLE
         elif self.splitter_rc.Contains(pt):
-            # gripper
-            return self.PROP_HIT_SPLITTER
+            return PROP_HIT_SPLITTER
         elif self.value_rc.Contains(pt):
-            # value
-            return self.PROP_HIT_VALUE
-        return self.PROP_HIT_NONE
+            return PROP_HIT_VALUE
+
+        return PROP_HIT_NONE
 
     def OnMouseDown(self, pt):
         ht = self.HitTest(pt)
         # click on the expand buttons? expand it?
-        if self.HasChildren() and ht == self.PROP_HIT_EXPAND:
+        if self.HasChildren() and ht == PROP_HIT_EXPAND:
             self.SetExpand(not self.expanded)
-        elif ht == self.PROP_HIT_SPLITTER or ht == self.PROP_HIT_NONE:
+        elif ht == PROP_HIT_SPLITTER or ht == PROP_HIT_NONE:
             self.UpdatePropValue()
             self.DestroyControl()
-        elif not self.GetReadOnly() and ht == self.PROP_HIT_VALUE:
-            # show the control when in PROP_DISP_NORMAL mode
+        elif not self.GetReadonly() and ht == PROP_HIT_VALUE:
             self.CreateControl()
         return ht
 
@@ -645,31 +637,36 @@ class Property(object):
         ht = self.HitTest(pt)
         if self.IsEnabled():
             # click on the check icon? change the state
-            if self.GetShowCheck() and ht == self.PROP_HIT_CHECK:
+            if self.GetShowCheck() and ht == PROP_HIT_CHECK:
                 checked = self.IsChecked()
                 self.SetChecked(not checked)
         return ht
 
     def OnMouseDoubleClick(self, pt):
         ht = self.HitTest(pt)
+
         if self.IsEnabled():
-            if not self.GetReadOnly():
-                # show the control when in PROP_DISP_NORMAL mode
-                if ht == self.PROP_HIT_VALUE:
+            if ht == PROP_HIT_VALUE:
+                if not self.GetReadonly():
                     self.CreateControl()
-            if ht == self.PROP_HIT_EXPAND:
+
+            elif ht == PROP_HIT_EXPAND:
                 self.SetExpand(not self.expanded)
+
             self.SendPropEvent(wxEVT_PROP_DOUBLE_CLICK)
+
         return ht
 
     def OnMouseRightClick(self, pt):
         ht = self.HitTest(pt)
+
         if self.IsEnabled():
-            #destory the control when the mouse moves out
-            if ht == self.PROP_HIT_NONE:
+            # destroy the control when the mouse moves out
+            if ht == PROP_HIT_NONE:
                 self.UpdatePropValue()
                 self.DestroyControl()
             self.SendPropEvent(wxEVT_PROP_RIGHT_CLICK)
+
         return ht
 
     def OnMouseMove(self, pt):
@@ -694,19 +691,19 @@ class Property(object):
                               wx.DefaultSize, wx.TE_PROCESS_ENTER)
 
             win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
-        elif style == PROP_CTRL_COMBO:
+
+        elif style == PROP_CTRL_CHOICE:
             win = wx.Choice(self.grid, wx.ID_ANY,
                             self.value_rc.GetTopLeft(), wx.DefaultSize,
-                            list(six.iterkeys(self.choices)))
+                            list(six.iterkeys(self.choices)), wx.CB_SORT)
             for i in range(win.GetCount()):
                 if win.GetString(i) == self.description:
                     win.SetSelection(i)
                     break
+
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
-            # TODO
-            #m_control = new BSMPropEditBtn(m_parent,IDC_BSM_PROP_CONTROL,GetValue())
-            #sizeCtrl = m_control->GetSize()
-            pass
+            win = wx.Button(self.grid, wx.ID_ANY, self.GetValue())
+            win.Bind(wx.EVT_BUTTON, self.OnCtrlButton)
 
         elif style == PROP_CTRL_SLIDER:
             nmax = int(self.value_max)
@@ -715,8 +712,7 @@ class Property(object):
 
             win = wx.Slider(self.grid, wx.ID_ANY, val, nmin, nmax,
                             self.value_rc.GetTopLeft(), wx.DefaultSize,
-                            wx.SL_LABELS | wx.SL_AUTOTICKS |
-                            wx.SL_HORIZONTAL | wx.SL_TOP)
+                            wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
 
         elif style == PROP_CTRL_SPIN:
             nmax = int(self.value_max)
@@ -735,7 +731,8 @@ class Property(object):
         elif style == PROP_CTRL_RADIO:
             win = wx.RadioBox(self.grid, wx.ID_ANY, "",
                               self.value_rc.GetTopLeft(), wx.DefaultSize,
-                              list(six.iterkeys(self.choices)), 5, wx.RA_SPECIFY_COLS)
+                              sorted(list(six.iterkeys(self.choices))), 5,
+                              wx.RA_SPECIFY_COLS)
             for i in range(win.GetCount()):
                 if win.GetString(i) == self.description:
                     win.SetSelection(i)
@@ -769,6 +766,21 @@ class Property(object):
         wx.CallAfter(self.OnTextEnter)
         evt.Skip()
 
+    def OnCtrlButton(self, evt):
+        if self.ctrl_type == PROP_CTRL_FILE_SEL:
+            style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+            dlg = wx.FileDialog(self.grid, "Choose a file", self.GetValueAsString(),
+                                "", "*.*", style)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.SetValue(dlg.GetPath())
+            dlg.Destroy()
+        elif self.ctrl_type == PROP_CTRL_FOLDER_SEL:
+            dlg = wx.DirDialog(self.grid, "Choose input directory", self.GetValueAsString(),
+                               wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+            if dlg.ShowModal() == wx.ID_OK:
+                self.SetValue(dlg.GetPath())
+            dlg.Destroy()
+
     def LayoutControl(self):
         """re-positioning the control"""
         if self.window is None:
@@ -776,7 +788,7 @@ class Property(object):
         (x, y) = self.grid.GetViewStart()
         rc = wx.Rect(*self.value_rc)
         rc.Offset(wx.Point(-x*5, -y*5))
-        if self.ctrl_type in [PROP_CTRL_EDIT, PROP_CTRL_COMBO, PROP_CTRL_SPIN,
+        if self.ctrl_type in [PROP_CTRL_EDIT, PROP_CTRL_CHOICE, PROP_CTRL_SPIN,
                               PROP_CTRL_CHECK, PROP_CTRL_RADIO, PROP_CTRL_SLIDER,
                               PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL,
                               PROP_CTRL_COLOR]:
@@ -812,7 +824,7 @@ class Property(object):
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
             self.value = self.window.GetLabel()
 
-        elif style == PROP_CTRL_COMBO:
+        elif style == PROP_CTRL_CHOICE:
             comb = self.window
             self.value = comb.GetString(comb.GetSelection())
             self.description = ''
@@ -867,7 +879,7 @@ class Property(object):
             pass
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
             pass
-        elif style in [PROP_CTRL_COMBO, PROP_CTRL_RADIO]:
+        elif style in [PROP_CTRL_CHOICE, PROP_CTRL_RADIO]:
             for k, v in six.iteritems(self.choices):
                 if v == self.value:
                     self.description = k
@@ -901,7 +913,7 @@ class Property(object):
 
     def Refresh(self, force=False):
         """notify the parent to redraw the property"""
-        if self.GetVisible() or force:
+        if self.IsVisible() or force:
             self.SendPropEvent(wxEVT_PROP_REFRESH)
 
     def SetClientRect(self, rc):
@@ -1002,7 +1014,7 @@ class Property(object):
 
     def SetReadOnly(self, readonly, silent=False):
         """set the property to readonly"""
-        if readonly != self.GetReadOnly():
+        if readonly != self.GetReadonly():
             self.readonly = readonly
             if not silent:
                 self.Refresh()
