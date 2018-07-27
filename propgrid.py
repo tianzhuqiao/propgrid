@@ -151,7 +151,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def InsertProperty(self, name, label="", value="", index=-1, update=True):
         # add the prop window to the grid
-        prop = Property(self, name, label, str(value))
+        prop = Property(self, name, label, value)
         return self._InsertProperty(prop, index, update)
 
     def CopyProperty(self, prop, index=-1, update=True):
@@ -168,26 +168,29 @@ class PropGrid(wx.ScrolledWindow):
         return prop
 
     def RemoveProperty(self, prop, update=True):
-        #remove property
+        # remove property
         if isinstance(prop, six.string_types) or isinstance(prop, Property):
             index = self.FindPropertyIndex(prop)
         elif isinstance(prop, int):
             index = prop
         else:
             return False
+
         if index >= 0 and index < self.GetPropCount():
             prop = self._props[index]
+            activated = False
             if prop == self.prop_selected:
+                activated = True
                 self.SelectProperty(-1)
             del self._props[index]
-
-            name = prop.GetName()
 
             if index != -1 and (not update):
                 self.CheckProp()
             if index >= self.GetPropCount():
                 index = self.GetPropCount() - 1
-            self.SelectProperty(index)
+
+            if activated:
+                self.SelectProperty(index)
 
             self.UpdateGrid(update, update)
             return True
@@ -248,7 +251,7 @@ class PropGrid(wx.ScrolledWindow):
         rc = p.GetClientRect()
         # translate to the scrolled position
         (rc.x, rc.y) = self.CalcScrolledPosition(rc.x, rc.y)
-        (x, y) = self.GetViewStart()
+        (_, y) = self.GetViewStart()
         rcClient = self.GetClientRect()
         if rcClient.top < rc.top and rcClient.bottom > rc.bottom:
             # if the prop is visible, simply return
@@ -636,11 +639,8 @@ class PropGrid(wx.ScrolledWindow):
         pt = self.CalcUnscrolledPosition(evt.GetPosition())
         index = self.PropHitTest(pt)
         self.pos_mouse_down = pt
-        # activate the property under mouse
-        self.SelectProperty(index)
         if index != -1:
             prop = self.GetProperty(index)
-            assert prop and prop == self.prop_selected
 
             # pass the event to the property
             ht = prop.OnMouseDown(pt)
@@ -664,6 +664,8 @@ class PropGrid(wx.ScrolledWindow):
                 PropGrid.drag_start = self.ClientToScreen(pt)
                 PropGrid.drag_prop = prop
                 PropGrid.drag_state = 1
+        # activate the property under mouse
+        self.SelectProperty(index)
         evt.Skip()
 
     def OnMouseUp(self, evt):
@@ -856,10 +858,9 @@ class PropGrid(wx.ScrolledWindow):
 
 class PropSettings(wx.Dialog):
     def __init__(self, parent, prop):
-        wx.Dialog.__init__(self, parent, title=u"Settings...",
+        wx.Dialog.__init__(self, parent, title="Settings...",
                            size=wx.Size(402, 494),
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
-
 
         self.propgrid = PropGrid(self)
         self.prop = prop
@@ -872,24 +873,24 @@ class PropSettings(wx.Dialog):
             self.items = (('name', 'Name', '', PROP_CTRL_EDIT),
                           ('label', 'Label', '', PROP_CTRL_EDIT),
                           ('value', 'Value', '', PROP_CTRL_EDIT),
-                          ('description', 'Description', 'text shown next to the value', PROP_CTRL_EDIT),
+                          ('description', 'Description', 'text shown next to the value',
+                           PROP_CTRL_EDIT),
                           ('value_max', 'Max value', '', PROP_CTRL_SPIN),
                           ('value_min', 'Min value', '', PROP_CTRL_SPIN),
                           ('indent', 'Indent level', '', PROP_CTRL_SPIN),
-                          ('show_check', 'Show breakpoint', '', PROP_CTRL_CHECK),
+                          ('show_check', 'Show check icon', '', PROP_CTRL_CHECK),
                           ('enable', 'Enable', '', PROP_CTRL_CHECK),
                           ('italic', 'Italic', '', PROP_CTRL_CHECK),
                           ('readonly', 'Read only', '', PROP_CTRL_CHECK),
                           ('ctrl_type', 'Control window type', '', PROP_CTRL_CHOICE),
-                          ('choices', 'Choice list', 'separate by ";"', PROP_CTRL_EDIT),
+                          ('choices', 'Choice list', '', PROP_CTRL_EDIT),
                           ('text_clr', 'Normal text color', '', PROP_CTRL_COLOR),
                           ('text_clr_sel', 'Selected text color', '', PROP_CTRL_COLOR),
                           ('text_clr_disabled', 'Disable text color', '', PROP_CTRL_COLOR),
                           ('bg_clr', 'Normal background color', '', PROP_CTRL_COLOR),
                           ('bg_clr_sel', 'Selected background color', '', PROP_CTRL_COLOR),
                           ('bg_clr_disabled', 'Disable background color', '', PROP_CTRL_COLOR))
-                          #('showLabelTips', 'Show label tips', PROP_CTRL_CHECK),
-                          #('showValueTips', 'Show value tips', PROP_CTRL_CHECK))
+
         for (name, label, tip, ctrl) in self.items:
             pp = self.propgrid.InsertProperty(name, label, '')
             if prop:
@@ -912,8 +913,7 @@ class PropSettings(wx.Dialog):
             if name in ['choices']:
                 pp.SetValue(json.dumps(v))
             elif ctrl == PROP_CTRL_CHECK:
-                pp.SetValue(str(v+0))
-                pp.SetDescription(str(v))
+                pp.SetValue(v)
             elif ctrl == PROP_CTRL_COLOR:
                 pp.SetValue(v)
                 pp.SetBgColor(v, v, v)
@@ -923,9 +923,9 @@ class PropSettings(wx.Dialog):
                 pp.SetTextColor(t, t, t)
             elif ctrl in [PROP_CTRL_SPIN, PROP_CTRL_SLIDER]:
                 pp.SetRange(-2**31-1, 2**31)
-                pp.SetValue(str(v))
+                pp.SetValue(v)
             else:
-                pp.SetValue(str(v))
+                pp.SetValue(v)
             pp.SetShowCheck(False)
 
         sz = wx.BoxSizer(wx.VERTICAL)

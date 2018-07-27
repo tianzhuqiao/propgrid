@@ -134,8 +134,7 @@ class Property(object):
         p.value_min = self.value_min
         p.title_width = self.title_width
         p.indent = self.indent
-        p.show_icon = self.show_icon
-        p.bpCondition = self.bpCondition
+        p.show_check = self.show_check
         p.checked = self.checked
         p.activated = self.activated
         p.enable = self.enable
@@ -220,9 +219,9 @@ class Property(object):
         self.choices = {}
         # dict, split the key and value
         if isinstance(choices, dict):
-            self.choices = {str(k): str(v) for k, v in six.iteritems(choices)}
+            self.choices = {str(k): v for k, v in six.iteritems(choices)}
         elif isinstance(choices, list):
-            self.choices = {str(v):str(v) for v in choices}
+            self.choices = {str(v): v for v in choices}
         else:
             return False
         self.UpdateDescription()
@@ -349,7 +348,7 @@ class Property(object):
         if not silent:
             self.Refresh()
 
-    def GetShowCheck(self):
+    def IsShowCheck(self):
         """return whether the icon is shown"""
         return self.show_check
 
@@ -368,9 +367,9 @@ class Property(object):
 
     def SetValue(self, value, silent=False):
         """set the value"""
-        if self.value != str(value):
+        if self.value != value:
             self.DestroyControl()
-            self.value = str(value)
+            self.value = value
             self.UpdateDescription()
             if not silent:
                 self.Refresh()
@@ -590,7 +589,7 @@ class Property(object):
 
     def DrawCheck(self, dc):
         # draw radio button
-        if self.GetShowCheck():
+        if self.IsShowCheck():
             state = 0
             if not self.IsEnabled():
                 state = 1
@@ -654,7 +653,7 @@ class Property(object):
 
             dc.SetTextForeground(crtxt)
 
-            value = str(self.GetValue())
+            value = self.GetValueAsString()
             if self.description != "":
                 value += " (" + self.description + ")"
             (w, h) = dc.GetTextExtent(value)
@@ -793,18 +792,21 @@ class Property(object):
         # click on the expand buttons? expand it?
         if self.HasChildren() and ht == PROP_HIT_EXPAND:
             self.SetExpand(not self.expanded)
-        elif ht == PROP_HIT_SPLITTER or ht == PROP_HIT_NONE:
+
+        if ht == PROP_HIT_VALUE:
+            if not self.IsReadonly() and self.IsActivated():
+                self.CreateControl()
+        else:
             self.UpdatePropValue()
             self.DestroyControl()
-        elif not self.IsReadonly() and ht == PROP_HIT_VALUE:
-            self.CreateControl()
+
         return ht
 
     def OnMouseUp(self, pt):
         ht = self.HitTest(pt)
         if self.IsEnabled():
             # click on the check icon? change the state
-            if self.GetShowCheck() and ht == PROP_HIT_CHECK:
+            if self.IsShowCheck() and ht == PROP_HIT_CHECK:
                 checked = self.IsChecked()
                 self.SetChecked(not checked)
         return ht
@@ -816,8 +818,11 @@ class Property(object):
             if ht == PROP_HIT_VALUE:
                 if not self.IsReadonly():
                     self.CreateControl()
+            else:
+                self.UpdatePropValue()
+                self.DestroyControl()
 
-            elif ht == PROP_HIT_EXPAND:
+            if ht == PROP_HIT_EXPAND:
                 self.SetExpand(not self.expanded)
 
             self.SendPropEvent(wxEVT_PROP_DOUBLE_CLICK)
@@ -853,9 +858,9 @@ class Property(object):
         style = self.ctrl_type
         win = None
         if style == PROP_CTRL_EDIT:
-            win = wx.TextCtrl(self.grid, wx.ID_ANY,
-                              self.GetValue(), self.value_rc.GetTopLeft(),
-                              wx.DefaultSize, wx.TE_PROCESS_ENTER)
+            win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
+                              self.value_rc.GetTopLeft(), wx.DefaultSize,
+                              wx.TE_PROCESS_ENTER)
 
             win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
 
@@ -869,7 +874,7 @@ class Property(object):
                     break
 
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
-            win = wx.Button(self.grid, wx.ID_ANY, self.GetValue())
+            win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
             win.Bind(wx.EVT_BUTTON, self.OnCtrlButton)
 
         elif style == PROP_CTRL_SLIDER:
@@ -916,7 +921,8 @@ class Property(object):
 
         if win:
             self.window = win
-            # the window size may be large than the value rect
+            # the window size may be larger than the value rect, notify parent
+            # grid to update it
             self.Resize()
             self.LayoutControl()
             self.window.SetFocus()
@@ -930,8 +936,14 @@ class Property(object):
     def OnKillFocus(self, evt):
         # destroy the control if it loses focus. Wait until the event has been
         # processed; otherwise, it may crash.
-        wx.CallAfter(self.OnTextEnter)
         evt.Skip()
+        wnd = evt.GetWindow()
+        while wnd:
+            if wnd.GetParent() == self.window:
+                return
+            wnd = wnd.GetParent()
+        # color window does not work on Mac
+        #wx.CallAfter(self.OnTextEnter)
 
     def OnCtrlButton(self, evt):
         if self.ctrl_type == PROP_CTRL_FILE_SEL:
@@ -980,62 +992,49 @@ class Property(object):
         if self.window is None:
             return False
 
-        value = self.value
-        description = self.description
-        self.value = ""
-        self.description = ""
+        value_old = self.value
         style = self.ctrl_type
+        value = None
         if style == PROP_CTRL_EDIT:
-            self.value = self.window.GetValue()
+            value = self.window.GetValue()
 
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
-            self.value = self.window.GetLabel()
+            value = self.window.GetLabel()
 
         elif style == PROP_CTRL_CHOICE:
             comb = self.window
-            self.value = comb.GetString(comb.GetSelection())
-            self.description = ''
-            if self.value in self.choices:
-                self.description = self.value
-                self.value = self.choices[self.value]
+            value = comb.GetString(comb.GetSelection())
+            if value in self.choices:
+                value = self.choices[value]
 
         elif style == PROP_CTRL_SLIDER:
-            self.value = ("%d"%self.window.GetValue())
+            value = self.window.GetValue()
 
         elif style == PROP_CTRL_SPIN:
-            self.value = ("%d"%self.window.GetValue())
+            value = self.window.GetValue()
 
         elif style == PROP_CTRL_CHECK:
-            check = self.window
-            self.value = ("%d"%check.GetValue())
-            if check.GetValue():
-                self.description = "true"
-            else:
-                self.description = "false"
+            value = self.window.GetValue()
 
         elif style == PROP_CTRL_RADIO:
             sel = self.window.GetSelection()
             if sel >= 0 and sel < self.window.GetCount():
                 value = self.window.GetString(sel)
                 if value in self.choices:
-                    self.value = self.choices[value]
-                    self.description = value
+                    value = self.choices[value]
 
         elif style == PROP_CTRL_COLOR:
             clr = self.window.GetColour()
-            self.value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
-            self.SetBgColor(self.value, self.value, self.value)
-            clr.SetRGB(clr.GetRGB()^0xffffff)
-            t = clr.GetAsString(wx.C2S_HTML_SYNTAX)
-            self.SetTextColor(t, t, t)
+            value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
 
+        self.SetValue(type(self.value)(value), silent=True)
         if self.SendPropEvent(wxEVT_PROP_CHANGING):
             self.SendPropEvent(wxEVT_PROP_CHANGED)
+            self.Refresh()
             return True
         else:
             #the parent rejects the operation, restore the original value
-            self.SetDescription(description)
-            self.SetValue(value)
+            self.SetValue(value_old)
             return False
 
     def UpdateDescription(self):
@@ -1055,22 +1054,21 @@ class Property(object):
         elif style == PROP_CTRL_SPIN:
             pass
         elif style == PROP_CTRL_CHECK:
-            value = int(self.value)
-            if value == 0:
-                self.description = "false"
-            elif value == 1:
-                self.description = "true"
+            if self.value:
+                self.description = "True"
+            else:
+                self.description = "False"
         return True
 
     def SendPropEvent(self, event):
         """ send property grid event to parent"""
-        eventObject = self.GetGrid()
+        win = self.GetGrid()
         evt = PropertyEvent(event)
         evt.SetProperty(self)
-        evt.SetEventObject(eventObject)
-        evtHandler = eventObject.GetEventHandler()
+        evt.SetEventObject(win)
+        evt_handler = win.GetEventHandler()
 
-        if evtHandler.ProcessEvent(evt):
+        if evt_handler.ProcessEvent(evt):
             return not evt.GetVeto()
         return False
 
