@@ -168,8 +168,8 @@ class PropGrid(wx.ScrolledWindow):
         p.SetParent(self)
         return self._InsertProperty(p, index, update)
 
-    def InsertSeparator(self, name='Separator', index=-1, update=True):
-        prop = self.InsertProperty(name, "", "", index, update)
+    def InsertSeparator(self, name='Separator', label='', index=-1, update=True):
+        prop = self.InsertProperty(name, label, '', index, update)
         if prop:
             prop.SetSeparator(True)
         return prop

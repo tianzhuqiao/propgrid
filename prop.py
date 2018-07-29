@@ -1,3 +1,5 @@
+import sys
+import traceback
 import six
 import wx
 from .propxpm import radio_xpm, tree_xpm
@@ -81,7 +83,7 @@ class Property(object):
         self.value_min = 0
         self.title_width = 80
         self.indent = 0
-        self.show_check = True
+        self.show_check = False
         self.checked = False
         self.activated = False
         self.enable = True
@@ -109,8 +111,8 @@ class Property(object):
         self.show_value_tips = False
         self.separator = False
         self.data = None
-        #self.m_validate = wx.FILTER_NONE
-        #self.m_nValidateType(VALIDATE_NONE)
+        self.formatter = None
+
         if type(self).img_check is None or type(self).img_expand is None:
             type(self).img_check = wx.ImageList(16, 16, True, 4)
             type(self).img_expand = wx.ImageList(12, 12, True, 2)
@@ -367,6 +369,8 @@ class Property(object):
         """set the value"""
         if self.value != value:
             self.DestroyControl()
+            if self.formatter and not self.formatter.validate(str(value)):
+                return False
             self.value = value
             self.UpdateDescription()
             if not silent:
@@ -380,6 +384,8 @@ class Property(object):
 
     def GetValueAsString(self):
         """get the value as string"""
+        if self.formatter:
+            return self.formatter.format(self.value)
         return str(self.value)
 
     def SetValueTip(self, tip):
@@ -391,6 +397,15 @@ class Property(object):
         if self.value_tip:
             return self.value_tip
         return self.value
+
+    def SetFormatter(self, formatter):
+        if not formatter or not hasattr(formatter, 'validate') or\
+           not hasattr(formatter, 'format') or not hasattr(formatter, 'coerce'):
+            formatter = None
+        self.formatter = formatter
+
+    def GetFormatter(self, formatter):
+        return self.formatter
 
     def SetIndent(self, indent, silent=False):
         """set the indent to a positive integer"""
@@ -485,13 +500,15 @@ class Property(object):
         """
         self.text_clr = clr
         if not self.text_clr:
-            self.text_clr = wx.BLACK.GetAsString(wx.C2S_HTML_SYNTAX)
+            self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT).\
+                             GetAsString(wx.C2S_HTML_SYNTAX)
         self.text_clr_sel = clr_sel
         if not self.text_clr_sel:
             self.text_clr_sel = wx.WHITE.GetAsString(wx.C2S_HTML_SYNTAX)
         self.text_clr_disabled = clr_disabled
         if not self.text_clr_disabled:
-            self.text_clr_disabled = wx.LIGHT_GREY.GetAsString(wx.C2S_HTML_SYNTAX)
+            self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)\
+                                    .GetAsString(wx.C2S_HTML_SYNTAX)
         if not silent:
             self.Refresh()
 
@@ -614,11 +631,11 @@ class Property(object):
 
     def DrawLabel(self, dc):
         # draw label
-        if self.italic:
-            dc.SetFont(wx.ITALIC_FONT)
+        if not self.IsEnabled() or self.IsReadonly():
+            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
         else:
-            dc.SetFont(wx.NORMAL_FONT)
-
+            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
+        dc.SetTextForeground(clr)
         dc.SetClippingRegion(self.label_rc)
         (w, h) = dc.GetTextExtent(self.label)
 
@@ -667,10 +684,6 @@ class Property(object):
             return
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
-        if self.enable:
-            dc.SetTextForeground(wx.BLACK)
-        else:
-            dc.SetTextForeground(wx.LIGHT_GREY)
 
         rc = self.GetClientRect()
         self.PrepareDrawRect()
@@ -691,6 +704,10 @@ class Property(object):
         dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
         dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
 
+        if self.IsItalic():
+            dc.SetFont(wx.ITALIC_FONT)
+        else:
+            dc.SetFont(wx.NORMAL_FONT)
         # draw select rectangle
         if self.activated:
             pen.SetColour(wx.BLACK)
@@ -747,17 +764,24 @@ class Property(object):
 
         self.label_rc = wx.Rect(*rc)
         self.label_rc.x = x + MARGIN_X*2
-        self.label_rc.SetRight(self.title_width)
-        x = self.label_rc.right
+        if not self.IsSeparator():
+            self.label_rc.SetRight(self.title_width)
+            x = self.label_rc.right
 
-        self.splitter_rc = wx.Rect(*rc)
-        self.splitter_rc.x = x + MARGIN_X
-        self.splitter_rc.SetWidth(8)
+            self.splitter_rc = wx.Rect(*rc)
+            self.splitter_rc.x = x + MARGIN_X
+            self.splitter_rc.SetWidth(8)
 
-        self.value_rc = wx.Rect(*rc)
-        self.value_rc.SetX(self.splitter_rc.right)
-        self.value_rc.SetWidth(rc.right-self.splitter_rc.right)
-        self.value_rc.Deflate(1, 1)
+            self.value_rc = wx.Rect(*rc)
+            self.value_rc.SetX(self.splitter_rc.right)
+            self.value_rc.SetWidth(rc.right-self.splitter_rc.right)
+            self.value_rc.Deflate(1, 1)
+        else:
+            # separator does not have splitter & value
+            self.label_rc.SetWidth(rc.right-self.radio_rc.right)
+            self.splitter_rc = wx.Rect(rc.right, rc.top, 0, 0)
+            self.value_rc = wx.Rect(rc.right, rc.top, 0, 0)
+
 
     def HitTest(self, pt):
         """find the mouse position relative to the property"""
@@ -852,7 +876,6 @@ class Property(object):
         """create the control"""
         if self.window != None or self.IsSeparator():
             return
-        self.PreparePropValidator()
         style = self.ctrl_type
         win = None
         if style == PROP_CTRL_EDIT:
@@ -982,9 +1005,6 @@ class Property(object):
             return True
         return False
 
-    def PreparePropValidator(self):
-        pass
-
     def UpdatePropValue(self):
         """update the value"""
         if self.window is None:
@@ -1025,7 +1045,17 @@ class Property(object):
             clr = self.window.GetColour()
             value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
 
-        self.SetValue(type(self.value)(value), silent=True)
+        try:
+            if self.formatter:
+                if self.formatter.validate(str(value)):
+                    value = self.formatter.coerce(str(value))
+            else:
+                value = type(self.value)(value)
+            self.SetValue(value, silent=True)
+        except ValueError:
+            traceback.print_exc(file=sys.stdout)
+            return False
+
         if self.SendPropEvent(wxEVT_PROP_CHANGING):
             self.SendPropEvent(wxEVT_PROP_CHANGED)
             self.Refresh()
