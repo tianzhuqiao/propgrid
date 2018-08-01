@@ -36,7 +36,7 @@ class Formatter(object):
         pass
 
     # Default (dummy) validate routine
-    def validate(self, value):
+    def validate(self, str_value):
         """
         Return true if value is valid for the field.
         value is a string from the UI.
@@ -51,9 +51,9 @@ class Formatter(object):
         return str(value)
 
     # Default (dummy) coerce routine
-    def coerce(self, value):
+    def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
-        return value
+        return str_value
 
 
 class EnumFormatter(Formatter):
@@ -62,7 +62,7 @@ class EnumFormatter(Formatter):
     """
     def __init__(self, enumeration, *args, **kwargs):
 
-        super(EnumFormatter,self).__init__(*args, **kwargs)
+        super(EnumFormatter, self).__init__(*args, **kwargs)
 
         self.enumeration = enumeration
 
@@ -74,13 +74,13 @@ class EnumFormatter(Formatter):
         return copy.copy(self.enumeration.items())
 
 
-    def validate(self, value):
+    def validate(self, str_value):
         """
         Return true if value is valid for the field.
         value is a string from the UI.
         """
-        vv = [ s for i, s in self.validValues() ]
-        return (value in vv)
+        vv = [s for i, s in self.validValues()]
+        return str_value in vv
 
 
     def format(self, value):
@@ -88,9 +88,9 @@ class EnumFormatter(Formatter):
         return self.enumeration[value]
 
 
-    def coerce(self, value):
+    def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
-        return getattr(self.enumeration, value)
+        return getattr(self.enumeration, str_value)
 
 
 class FormatterMeta(type):
@@ -127,7 +127,7 @@ class FormatterMeta(type):
             newdict['__init__'] = __init__
         else:
             def __init__(self, *args, **kwargs):
-                super(self.__class__,self).__init__(*args, **kwargs)
+                super(self.__class__, self).__init__(*args, **kwargs)
                 initialize = getattr(self, 'initialize', None)
                 if initialize:
                     initialize()
@@ -139,8 +139,8 @@ class FormatterMeta(type):
             # Override validate method
             re_validation_flags = newdict.get('re_validation_flags', 0)
             newdict['_re_validation'] = re.compile(re_validation, re_validation_flags)
-            def validate(self, value):
-                return (self._re_validation.match(value) != None)
+            def validate(self, str_value):
+                return self._re_validation.match(str_value) != None
             newdict['validate'] = validate
 
         # Delegate class creation to the expert
@@ -152,9 +152,10 @@ class ObjectIdFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     Object ID is assumed to be a large (32 bit?) unsigned integer.
     """
     re_validation = '^[0-9]+$'
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class StringFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     pass
@@ -174,9 +175,9 @@ class EmailFormatter(StringFormatter):
     # Strangely enough, '/' is legal in email addresses.
     # However, I've never seen it used, so I prefer to leave it out.
     _re_subs = {
-            'sub1' : r'[a-zA-Z~_-][a-zA-Z0-9_:~-]*',
-            'sub2' : r'(\.[a-zA-Z0-9_:~-]+)*',
-            'sfx'  : r'\.[a-zA-Z]{2,3}'
+            'sub1': r'[a-zA-Z~_-][a-zA-Z0-9_:~-]*',
+            'sub2': r'(\.[a-zA-Z0-9_:~-]+)*',
+            'sfx' : r'\.[a-zA-Z]{2,3}'
         }
     re_validation = '^%(sub1)s%(sub2)s[@]%(sub1)s%(sub2)s%(sfx)s$' % _re_subs
 
@@ -187,15 +188,46 @@ class MoneyFormatter(StringFormatter):
 class IntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Signed or unsigned integer."""
     #re_validation = '^[-+]?[0-9]+$'
-    def validate(self, value):
+    def validate(self, str_value):
         try:
-            v = int(value)
+            v = int(str_value)
             return True
         except:
             return False
-    def coerce(self, value):
-        if value: return int(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
+
+class HexFormatter(IntFormatter):
+
+    def validate(self, str_value):
+        try:
+            str_value = str_value.strip()
+            return self.format(self.coerce(str_value)) == str_value
+        except:
+            return False
+
+    def format(self, value):
+        return hex(value)
+
+    def coerce(self, str_value):
+        return int(str_value, 16)
+
+class BinFormatter(IntFormatter):
+
+    def validate(self, str_value):
+        try:
+            str_value = str_value.strip()
+            return self.format(self.coerce(str_value)) == str_value
+        except:
+            return False
+
+    def format(self, value):
+        return bin(value)
+
+    def coerce(self, str_value):
+        return int(str_value, 2)
 
 class Int8Formatter(IntFormatter):
     pass
@@ -204,51 +236,59 @@ class Int16Formatter(IntFormatter):
     pass
 
 class Int24Formatter(IntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class Int32Formatter(IntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class Int64Formatter(IntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class UIntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Unsigned integer."""
     re_validation = '^[0-9]+$'
-    def coerce(self, value):
-        if value: return int(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class UInt8Formatter(UIntFormatter):
     pass
 
 class UInt16Formatter(UIntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class UInt24Formatter(UIntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class UInt32Formatter(UIntFormatter):
-    def coerce(self, value):
-        if value: return long(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return int(str_value)
+        return str_value
 
 class FloatFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Signed or unsigned floating-point number."""
     re_validation = '^[-+]?(([0-9]+[.]?[0-9]*)|([0-9]*[.]?[0-9]+))$'
-    def coerce(self, value):
-        if value: return float(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return float(str_value)
+        return str_value
 
 class DoubleFormatter(FloatFormatter):
     pass
@@ -256,9 +296,10 @@ class DoubleFormatter(FloatFormatter):
 class UFloatFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Unsigned floating-point number."""
     re_validation = '^(([0-9]+[.]?[0-9]*)|([0-9]*[.]?[0-9]+))$'
-    def coerce(self, value):
-        if value: return float(value)
-        return value
+    def coerce(self, str_value):
+        if str_value:
+            return float(str_value)
+        return str_value
 
 class UDoubleFormatter(UFloatFormatter):
     pass
@@ -285,9 +326,9 @@ class DateFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """
     re_validation = r'^[1-2][0-9]{3}([-/.])([0][1-9]|[1][0-2])\1([0][1-9]|[12][0-9]|[3][0-1])$'
 
-    def coerce(self, value):
+    def coerce(self, str_value):
         """Convert alternate date separators to '-'."""
-        return re.sub(r'[/.]', '-', value)
+        return re.sub(r'[/.]', '-', str_value)
 
 class DateFormatterMDY(DateFormatter):
     """Alternate date string (MM-DD-YYYY).
@@ -306,11 +347,11 @@ class DateFormatterMDY(DateFormatter):
         dt = time.strptime(value, '%Y-%m-%d')
         return time.strftime('%m-%d-%Y', dt)
 
-    def coerce(self, value):
+    def coerce(self, str_value):
 #        value = re.sub(r'[/.]', '-', value)
 #        dt = time.strptime(value, '%m-%d-%Y')
 #        return time.strftime('%Y-%m-%d', dt)
-        m, d, y = re.split('[-/.]', value)
+        m, d, y = re.split('[-/.]', str_value)
         return '%04d-%02d-%02d' % (int(y), int(m), int(d))
 
 class TimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
@@ -330,11 +371,11 @@ class TimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     def format(self, value):
         return ':'.join(value.split(':')[:2])
 
-    def coerce(self, value):
+    def coerce(self, str_value):
         # TODO pass validate() may still fail here, e.g., 10:15am
-        for fmt in ('%H:%M:%S', '%H:%M', '%I:%M:%S %p', '%I:%M %p','%I:%M:%S'):
+        for fmt in ('%H:%M:%S', '%H:%M', '%I:%M:%S %p', '%I:%M %p', '%I:%M:%S'):
             try:
-                dt = time.strptime(value, fmt)
+                dt = time.strptime(str_value, fmt)
                 break
             except ValueError:
                 pass
@@ -363,16 +404,16 @@ class DateTimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     # Storage format: YYYY-MM-DD HH:MM:SS -- 24-hour format.
     # Presentation format: same as storage format.
 
-    def validate(self , value):
+    def validate(self, str_value):
         datef = DateFormatter()
         timef = TimeFormatter()
-        date, time = re.split(r'[ ]+', value)
-        return (datef.validate(date) and timef.validate(time))
+        date, time = re.split(r'[ ]+', str_value)
+        return datef.validate(date) and timef.validate(time)
 
 
 if __name__ == '__main__':
 
-    from EnumType import EnumType
+    from .enumtype import EnumType
 
 #    from prs.PRSObject import PRSObject
 #
@@ -395,7 +436,7 @@ if __name__ == '__main__':
     failCount = 0
 
     # formatter.validValues
-    expectedValidValues = [ (0,'A'), (1,'B'), (2,'C'), (3,'D') ]
+    expectedValidValues = [(0, 'A'), (1, 'B'), (2, 'C'), (3, 'D')]
     temp = formatter.validValues()
     if temp == expectedValidValues:
         passCount += 1
@@ -427,15 +468,14 @@ if __name__ == '__main__':
     print()
     print('EmailFormatter')
 
-    tests = [
-            ('a@b.com', True),
-            ('a@b', False),
-            ('@b', False),
-            ('@b.c', False),
-            ('@b.us', False),
-            ('a@b.us', True),
-            ('~joe_public-73@bozo.net', True),
-        ]
+    tests = [('a@b.com', True),
+             ('a@b', False),
+             ('@b', False),
+             ('@b.c', False),
+             ('@b.us', False),
+             ('a@b.us', True),
+             ('~joe_public-73@bozo.net', True),
+            ]
     formatter = EmailFormatter()
     passCount = 0
     failCount = 0
@@ -449,4 +489,3 @@ if __name__ == '__main__':
             failCount += 1
     print('\tPASS (%d tests)' % passCount)
     print('\tFAIL (%d tests)' % failCount)
-

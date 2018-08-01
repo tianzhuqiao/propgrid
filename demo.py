@@ -4,7 +4,7 @@ import wx
 import wx.lib.agw.aui as aui
 import wx.py as py
 from . import propgrid as pg
-from . import formatter as fmt
+from . import formatters as fmt
 
 class MainFrame(wx.Frame):
     def __init__(self):
@@ -38,6 +38,14 @@ class MainFrame(wx.Frame):
         p = g.InsertProperty('integer', 'integer', 42)
         p.SetIndent(1)
         p.SetFormatter(fmt.IntFormatter())
+
+        p = g.InsertProperty('hex', 'hex', 42)
+        p.SetIndent(1)
+        p.SetFormatter(fmt.HexFormatter())
+
+        p = g.InsertProperty('bin', 'bin', 42)
+        p.SetIndent(1)
+        p.SetFormatter(fmt.BinFormatter())
 
         p = g.InsertProperty('float', 'float', 42.0)
         p.SetIndent(1)

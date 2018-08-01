@@ -369,7 +369,8 @@ class Property(object):
         """set the value"""
         if self.value != value:
             self.DestroyControl()
-            if self.formatter and not self.formatter.validate(str(value)):
+            fmt = self.formatter
+            if fmt and not fmt.validate(fmt.format(value)):
                 return False
             self.value = value
             self.UpdateDescription()
@@ -1049,6 +1050,8 @@ class Property(object):
             if self.formatter:
                 if self.formatter.validate(str(value)):
                     value = self.formatter.coerce(str(value))
+                else:
+                    return False
             else:
                 value = type(self.value)(value)
             self.SetValue(value, silent=True)

@@ -867,7 +867,7 @@ class PropSettings(wx.Dialog):
 
         self.propgrid = PropGrid(self)
         self.prop = prop
-        if prop.GetSeparator():
+        if prop.IsSeparator():
             self.items = (('name', 'Name', '', PROP_CTRL_EDIT),
                           ('label', 'Label', '', PROP_CTRL_EDIT),
                           ('indent', 'Indent level', '', PROP_CTRL_SPIN),
