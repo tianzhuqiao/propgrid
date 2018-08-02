@@ -188,7 +188,7 @@ class PropGrid(wx.ScrolledWindow):
             activated = False
             if prop == self.prop_selected:
                 activated = True
-                self.SelectProperty(-1)
+                self.SetSelection(-1)
             del self._props[index]
 
             if index != -1 and (not update):
@@ -197,7 +197,7 @@ class PropGrid(wx.ScrolledWindow):
                 index = self.GetPropCount() - 1
 
             if activated:
-                self.SelectProperty(index)
+                self.SetSelection(index)
             if update:
                 self.UpdateGrid()
             return True
