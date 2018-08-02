@@ -14,6 +14,8 @@
 # The software is licensed according to the terms of the PSF (Python Software
 # Foundation) license found here: http://www.python.org/psf/license/
 
+import six
+
 class EnumType(object):
     """
     Enumerated-values class.
@@ -21,11 +23,15 @@ class EnumType(object):
     Allows reference to enumerated values by name
     or by index (i.e., bidirectional mapping).
     """
-    def __init__(self, *names):
+    def __init__(self, *args, **kwargs):
         # Remember names list for reference by index
-        self._names = list(names)
+        self._items = {}
         # Attributes for direct reference
-        for _i, _s in enumerate(self._names):
+        for _i, _s in enumerate(args):
+            self._items[_i] = _s
+            setattr(self, _s, _i)
+        for _s, _i in six.iteritems(kwargs):
+            self._items[_i] = _s
             setattr(self, _s, _i)
 
     def __contains__(self, item):
@@ -36,25 +42,22 @@ class EnumType(object):
             return False
 
     def __iter__(self):
-        return enumerate(self._names)
+        return self.items()
 
     def __getitem__(self, key):
-        if type(key) == type(0):
-            return self._names[key]
+        if key in self._items:
+            return self._items[key]
         else:
             return self._nameToEnum(key)
 
     def __len__(self):
-        return len(self._names)
+        return len(self._items)
 
     def items(self):
-        return [(idx, self._names[idx])
-                for idx in range(0, len(self._names))]
-
+        return list(six.iteritems(self._items))
 
     def names(self):
-        return self._names[:]
-
+        return list(self._items.keys())
 
     def _nameToEnum(self, name):
         try:
