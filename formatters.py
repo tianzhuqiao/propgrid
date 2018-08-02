@@ -118,20 +118,21 @@ class FormatterMeta(type):
         # Generate __init__ method
         # Direct descendants of Formatter automatically get __init__.
         # Indirect descendants don't automatically get one.
-        if Formatter in bases:
-            def __init__(self, *args, **kwargs):
-                Formatter.__init__(self, *args, **kwargs)
-                initialize = getattr(self, 'initialize', None)
-                if initialize:
-                    initialize()
-            newdict['__init__'] = __init__
-        else:
-            def __init__(self, *args, **kwargs):
-                super(self.__class__, self).__init__(*args, **kwargs)
-                initialize = getattr(self, 'initialize', None)
-                if initialize:
-                    initialize()
-            newdict['__init__'] = __init__
+        if '__init__' not in newdict:
+            if Formatter in bases:
+                def __init__(self, *args, **kwargs):
+                    Formatter.__init__(self, *args, **kwargs)
+                    initialize = getattr(self, 'initialize', None)
+                    if initialize:
+                        initialize(*args, **kwargs)
+                newdict['__init__'] = __init__
+            else:
+                def __init__(self, *args, **kwargs):
+                    super(self.__class__, self).__init__(*args, **kwargs)
+                    initialize = getattr(self, 'initialize', None)
+                    if initialize:
+                        initialize(*args, **kwargs)
+                newdict['__init__'] = __init__
 
         # Generate validate-by-RE method if specified
         re_validation = newdict.get('re_validation', None)
@@ -188,25 +189,30 @@ class MoneyFormatter(StringFormatter):
 class IntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Signed or unsigned integer."""
     #re_validation = '^[-+]?[0-9]+$'
+
+    def __init__(self, min_val=None, max_val=None, **kwargs):
+        super(IntFormatter, self).__init__(min_val, max_val, **kwargs)
+
+        self.max_val = max_val
+        self.min_val = min_val
+
     def validate(self, str_value):
         try:
-            v = int(str_value)
+            v = self.coerce(str_value)
+            if self.max_val is not None and v > self.max_val:
+                return False
+            if self.min_val is not None and v < self.min_val:
+                return False
             return True
         except:
             return False
+
     def coerce(self, str_value):
         if str_value:
             return int(str_value)
         return str_value
 
 class HexFormatter(IntFormatter):
-
-    def validate(self, str_value):
-        try:
-            str_value = str_value.strip()
-            return self.format(self.coerce(str_value)) == str_value
-        except:
-            return False
 
     def format(self, value):
         return hex(value)
@@ -215,13 +221,6 @@ class HexFormatter(IntFormatter):
         return int(str_value, 16)
 
 class BinFormatter(IntFormatter):
-
-    def validate(self, str_value):
-        try:
-            str_value = str_value.strip()
-            return self.format(self.coerce(str_value)) == str_value
-        except:
-            return False
 
     def format(self, value):
         return bin(value)
@@ -253,13 +252,12 @@ class Int64Formatter(IntFormatter):
             return int(str_value)
         return str_value
 
-class UIntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class UIntFormatter(IntFormatter):
     """Unsigned integer."""
-    re_validation = '^[0-9]+$'
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=None, max_val=None, **kwargs):
+        super(UIntFormatter, self).__init__(min_val, max_val, **kwargs)
+
+        self.min_val = max(0, min_val)
 
 class UInt8Formatter(UIntFormatter):
     pass
@@ -282,9 +280,25 @@ class UInt32Formatter(UIntFormatter):
             return int(str_value)
         return str_value
 
-class FloatFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class FloatFormatter(Formatter):
     """Signed or unsigned floating-point number."""
-    re_validation = '^[-+]?(([0-9]+[.]?[0-9]*)|([0-9]*[.]?[0-9]+))$'
+    def __init__(self, min_val=None, max_val=None, **kwargs):
+        super(FloatFormatter, self).__init__(min_val, max_val, **kwargs)
+
+        self.max_val = max_val
+        self.min_val = min_val
+
+    def validate(self, str_value):
+        try:
+            v = self.coerce(str_value)
+            if self.max_val is not None and v > self.max_val:
+                return False
+            if self.min_val is not None and v < self.min_val:
+                return False
+            return True
+        except:
+            return False
+
     def coerce(self, str_value):
         if str_value:
             return float(str_value)
@@ -293,13 +307,11 @@ class FloatFormatter(six.with_metaclass(FormatterMeta, Formatter)):
 class DoubleFormatter(FloatFormatter):
     pass
 
-class UFloatFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class UFloatFormatter(FloatFormatter):
     """Unsigned floating-point number."""
-    re_validation = '^(([0-9]+[.]?[0-9]*)|([0-9]*[.]?[0-9]+))$'
-    def coerce(self, str_value):
-        if str_value:
-            return float(str_value)
-        return str_value
+    def __init__(self, min_val=None, max_val=None, **kwargs):
+        super(UFloatFormatter, self).__init__(min_val, max_val, **kwargs)
+        self.min_val = max(0, min_val)
 
 class UDoubleFormatter(UFloatFormatter):
     pass
@@ -414,23 +426,21 @@ class DateTimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
 if __name__ == '__main__':
 
     from .enumtype import EnumType
-
-#    from prs.PRSObject import PRSObject
-#
-#    print 'dir(ObjectIdField) =', dir(ObjectIdField)
-#    print 'ObjectIdField.__init__ =', ObjectIdField.__init__
-#    print 'ObjectIdField.__init__.func_doc =', ObjectIdField.__init__.func_doc
-#    anIdField = ObjectIdFormatter(False)
-#    print 'dir(anIdField) =', dir(anIdField)
-#    print 'anIdField.__class__ =', anIdField.__class__
-#
-#    print
-#    print 'dir(DateFormatterMDY) =', dir(DateFormatterMDY)
-#    print
-
+    def test(tests, fmt, msg):
+        print(msg)
+        failed, passed = 0, 0
+        for t, r in tests:
+            actual = fmt.validate(t)
+            if actual == r:
+                passed += 1
+            else:
+                print('failed test: {0}, expect {1}, returned {2}'.format(t, r, actual))
+                failed += 1
+        print('\tPASS: %d tests'% passed)
+        print('\tFAIL: %d tests'% failed)
     # ========== EnumFormatter ==========
     print('EnumFormatter')
-    TestEnum = EnumType('A', 'B', 'C', 'D')
+    TestEnum = EnumType('A', 'B', 'C', D=3)
     formatter = EnumFormatter(TestEnum)
     passCount = 0
     failCount = 0
@@ -464,10 +474,6 @@ if __name__ == '__main__':
         print('\tPASS (%d tests)' % passCount)
 
 
-    # ========== EmailFormatter ==========
-    print()
-    print('EmailFormatter')
-
     tests = [('a@b.com', True),
              ('a@b', False),
              ('@b', False),
@@ -476,16 +482,27 @@ if __name__ == '__main__':
              ('a@b.us', True),
              ('~joe_public-73@bozo.net', True),
             ]
-    formatter = EmailFormatter()
-    passCount = 0
-    failCount = 0
+    test(tests, EmailFormatter(), 'EmailFormatter')
 
-    for email, expect in tests:
-        actual = formatter.validate(email)
-        if actual == expect:
-            passCount += 1
-        else:
-            print(email, actual, expect)
-            failCount += 1
-    print('\tPASS (%d tests)' % passCount)
-    print('\tFAIL (%d tests)' % failCount)
+    tests = [('10', True),
+             ('0', True),
+             ('100', True),
+             ('-1', False)]
+    test(tests, IntFormatter(0, 100), 'IntFormatter')
+    test(tests, UIntFormatter(-1, 100), 'UIntFormatter')
+    test(tests, FloatFormatter(0, 100), 'FloatFormatter')
+    test(tests, UFloatFormatter(0, 100), 'UFloatFormatter')
+
+    tests = [('0x0a', True),
+             ('0x00', True),
+             ('0x64', True),
+             ('-0x1', False)]
+    test(tests, HexFormatter(0, 100), 'HexFormatter')
+
+    tests = [('0b1010', True),
+             ('0b0', True),
+             ('0b1100100', True),
+             ('-0b1', False)]
+    test(tests, BinFormatter(0, 100), 'BinFormatter')
+
+
