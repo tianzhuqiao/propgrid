@@ -60,19 +60,27 @@ class EnumFormatter(Formatter):
     """
     Formatter for enumerated (EnumType) data values.
     """
-    def __init__(self, enumeration, *args, **kwargs):
+    def __init__(self, enumeration, sort=None, *args, **kwargs):
 
         super(EnumFormatter, self).__init__(*args, **kwargs)
 
         self.enumeration = enumeration
+        self.sort = sort
 
 
     def validValues(self):
         """
         Return list of valid value (id,label) pairs.
         """
-        return copy.copy(self.enumeration.items())
-
+        items = copy.copy(self.enumeration.items())
+        if self.sort:
+            def sort_by_label(item):
+                return item[1]
+            key = None
+            if self.sort == 'label':
+                key = sort_by_label
+            items.sort(key=key)
+        return items
 
     def validate(self, str_value):
         """

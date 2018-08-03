@@ -291,7 +291,7 @@ class SelectorValidator(BaseValidator):
         options = self._getFieldOptions(self.attr)
         # Sort alphabetically
         options = [(opt[1], opt) for opt in options]
-        options.sort()
+        #options.sort()
         options = [opt[1] for opt in options]
         # Replace selector contents
         wgt.Clear()
@@ -341,7 +341,7 @@ class CheckListBoxValidator(BaseValidator):
         options = self._getFieldOptions(self.attr)
         # Sort alphabetically
         options = [(opt[1], opt) for opt in options]
-        options.sort()
+        #options.sort()
         options = [opt[1] for opt in options]
         # Replace selector contents
         self._setControlOptions(options)

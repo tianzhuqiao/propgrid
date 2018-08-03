@@ -71,10 +71,9 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
 
         p = g.InsertProperty('choice', 'choice', 1)
-        #p.SetChoices({'item 1':1, 'item 2':2, 'item 3':3})
-        choices = enumtype.EnumType(Monday=1, Tuesday=2, Wednesday=3)
+        choices = enumtype.EnumType(Monday=1, Tuesday=2, Wednesday=3,
+                                    Thursday=4, Friday=5, Saturday=6, Sunday=7)
         p.SetFormatter(fmt.EnumFormatter(choices))
-        p.SetControlStyle('choice')
         p.SetIndent(1)
 
         p = g.InsertProperty('dir_dialog', 'folder', '/home')
@@ -101,7 +100,6 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
 
         p = g.InsertProperty('radiobox', 'radiobox', 1)
-        #p.SetChoices({'item_1':1, 'item_2':2, 'item_3':3})
         p.SetFormatter(fmt.EnumFormatter(choices))
         p.SetControlStyle('radiobox')
         p.SetIndent(1)
