@@ -5,6 +5,7 @@ import six
 import wx
 from .propxpm import radio_xpm, tree_xpm
 from .validators import *
+from .formatters import *
 
 wxEVT_PROP_SELECTED = wx.NewEventType()
 wxEVT_PROP_CHANGING = wx.NewEventType()
@@ -38,6 +39,7 @@ EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 EVT_PROP_CLICK_CHECK = wx.PyEventBinder(wxEVT_PROP_CLICK_CHECK, 1)
 
+PROP_CTRL_DEFAULT = 0
 PROP_CTRL_NONE = 1
 PROP_CTRL_EDIT = 2
 PROP_CTRL_CHOICE = 3
@@ -91,7 +93,7 @@ class Property(object):
         self.expanded = True
         self.visible = True
         self.readonly = False
-        self.ctrl_type = PROP_CTRL_EDIT
+        self.ctrl_type = PROP_CTRL_DEFAULT
         self.window = None
         self.parent = -1
         self.SetGripperColor()
@@ -184,8 +186,8 @@ class Property(object):
         """
         self.UpdatePropValue()
         self.DestroyControl()
-        str_style = {'none': PROP_CTRL_NONE, 'editbox': PROP_CTRL_EDIT,
-                     'choice':PROP_CTRL_CHOICE,
+        str_style = {'default': PROP_CTRL_DEFAULT, 'none': PROP_CTRL_NONE,
+                     'editbox': PROP_CTRL_EDIT, 'choice':PROP_CTRL_CHOICE,
                      'file_dialog':PROP_CTRL_FILE_SEL,
                      'dir_dialog': PROP_CTRL_FOLDER_SEL,
                      'slider': PROP_CTRL_SLIDER, 'spin': PROP_CTRL_SPIN,
@@ -313,6 +315,8 @@ class Property(object):
 
     def SetValue(self, value, silent=False):
         """set the value"""
+        if self.IsReadonly():
+            return False
         if self.value != value:
             self.DestroyControl()
             fmt = self.formatter
@@ -821,6 +825,12 @@ class Property(object):
         if self.window != None or self.IsSeparator():
             return
         style = self.ctrl_type
+        if style == PROP_CTRL_DEFAULT:
+            style = PROP_CTRL_EDIT
+            if isinstance(self.formatter, EnumFormatter):
+                style = PROP_CTRL_CHOICE
+            elif isinstance(self.formatter, BoolFormatter):
+                style = PROP_CTRL_CHECK
         win = None
         if style == PROP_CTRL_EDIT:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
@@ -935,12 +945,8 @@ class Property(object):
         (x, y) = self.grid.GetViewStart()
         rc = wx.Rect(*self.value_rc)
         rc.Offset(wx.Point(-x*5, -y*5))
-        if self.ctrl_type in [PROP_CTRL_EDIT, PROP_CTRL_CHOICE, PROP_CTRL_SPIN,
-                              PROP_CTRL_CHECK, PROP_CTRL_RADIO, PROP_CTRL_SLIDER,
-                              PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL,
-                              PROP_CTRL_COLOR]:
-            self.window.SetSize(rc.GetSize())
-            self.window.Move(rc.GetTopLeft())
+        self.window.SetSize(rc.GetSize())
+        self.window.Move(rc.GetTopLeft())
 
     def DestroyControl(self):
         """destroy the value setting control"""
@@ -956,31 +962,37 @@ class Property(object):
         """update the value"""
         if self.window is None:
             return False
+        validator = self.window.GetValidator()
+        if validator:
+            validator.TransferFromWindow()
+            return
 
         value_old = self.value
         style = self.ctrl_type
         value = None
-        if style == PROP_CTRL_EDIT:
+        if isinstance(self.window, wx.TextCtrl):
             value = self.window.GetValue()
 
-        elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
+        elif isinstance(self.window, wx.Button):
+            # [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]
             value = self.window.GetLabel()
 
-        elif style in [PROP_CTRL_CHOICE, PROP_CTRL_RADIO]:
+        elif isinstance(self.window, wx.RadioBox) or\
+             isinstance(self.window, wx.Choice):
             sel = self.window.GetSelection()
             if sel >= 0 and sel < self.window.GetCount():
                 value = self.window.GetString(sel)
 
-        elif style == PROP_CTRL_SLIDER:
+        elif isinstance(self.window, wx.Slider):
             value = self.window.GetValue()
 
-        elif style == PROP_CTRL_SPIN:
+        elif isinstance(self.window, wx.SpinCtrl):
             value = self.window.GetValue()
 
-        elif style == PROP_CTRL_CHECK:
+        elif isinstance(self.window, wx.CheckBox):
             value = self.window.GetValue()
 
-        elif style == PROP_CTRL_COLOR:
+        elif isinstance(self.window, wx.ColourPickerCtrl):
             clr = self.window.GetColour()
             value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
 
