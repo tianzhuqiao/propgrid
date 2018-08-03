@@ -1,8 +1,10 @@
 import sys
 import traceback
+import copy
 import six
 import wx
 from .propxpm import radio_xpm, tree_xpm
+from .validators import *
 
 wxEVT_PROP_SELECTED = wx.NewEventType()
 wxEVT_PROP_CHANGING = wx.NewEventType()
@@ -78,9 +80,6 @@ class Property(object):
         self.label_tip = ''
         self.value = value
         self.value_tip = ''
-        self.description = ""
-        self.value_max = 100
-        self.value_min = 0
         self.title_width = 80
         self.indent = 0
         self.show_check = False
@@ -95,7 +94,6 @@ class Property(object):
         self.ctrl_type = PROP_CTRL_EDIT
         self.window = None
         self.parent = -1
-        self.choices = {}
         self.SetGripperColor()
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
@@ -129,9 +127,6 @@ class Property(object):
         p = Property(self.grid, self.name, self.label, self.value)
         p.label_tip = self.label_tip
         p.value_tip = self.value_tip
-        p.description = self.description
-        p.value_max = self.value_max
-        p.value_min = self.value_min
         p.title_width = self.title_width
         p.indent = self.indent
         p.show_check = self.show_check
@@ -145,7 +140,6 @@ class Property(object):
         p.readonly = self.readonly
         p.ctrl_type = self.ctrl_type
         p.parent = self.parent
-        p.choices = dict(self.choices)
         p.SetGripperColor(self.gripper_clr)
         p.SetTextColor(self.text_clr, self.text_clr_sel, self.text_clr_disabled, True)
         p.SetBgColor(self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled, True)
@@ -153,6 +147,7 @@ class Property(object):
         p.show_value_tips = self.show_value_tips
         p.separator = self.separator
         p.data = self.data
+        p.formatter = copy.copy(p.formatter)
         return p
 
     def SetGrid(self, grid):
@@ -201,35 +196,11 @@ class Property(object):
         if style < PROP_CTRL_NONE or style >= PROP_CTRL_NUM:
             return False
         self.ctrl_type = style
-        self.UpdateDescription()
         return True
 
     def GetControlStyle(self):
         """return the control type"""
         return self.ctrl_type
-
-    def SetChoices(self, choices):
-        """set the choices list
-        choices:
-            # dict
-            SetChoice({'1':1, '0':0, 'Z':'Z', 'X':'X'})
-            # list
-            SetChoice([256, 512, 1024])
-        """
-        self.choices = {}
-        # dict, split the key and value
-        if isinstance(choices, dict):
-            self.choices = {str(k): v for k, v in six.iteritems(choices)}
-        elif isinstance(choices, list):
-            self.choices = {str(v): v for v in choices}
-        else:
-            return False
-        self.UpdateDescription()
-        return True
-
-    def GetChoices(self):
-        """return the choices list"""
-        return dict(self.choices)
 
     def Enable(self, enable=True, silent=False):
         """enable/disable the property"""
@@ -277,18 +248,6 @@ class Property(object):
             return self.label_tip
         return self.GetName()
 
-    def SetDescription(self, description, silent=False):
-        """set the description"""
-        if self.description == description:
-            return
-        self.description = description
-        if not silent:
-            self.Refresh()
-
-    def GetDescription(self):
-        """get the description"""
-        return self.description
-
     def Italic(self, italic=True, silent=False):
         """turn on/of the italic text"""
         if self.italic == italic:
@@ -327,19 +286,6 @@ class Property(object):
         """return the parent property"""
         return self.parent
 
-    def SetRange(self, minval, maxval):
-        """
-        set the min/max values
-
-        It is only used in spin and slider controls.
-        """
-        self.value_max = float(maxval)
-        self.value_min = float(minval)
-
-    def GetRange(self):
-        """return the value range"""
-        return (self.value_min, self.value_max)
-
     def SetShowCheck(self, show=True, silent=True):
         """show/hide radio button"""
         if self.show_check == show:
@@ -373,7 +319,6 @@ class Property(object):
             if fmt and not fmt.validate(fmt.format(value)):
                 return False
             self.value = value
-            self.UpdateDescription()
             if not silent:
                 self.Refresh()
             return True
@@ -670,11 +615,9 @@ class Property(object):
             dc.SetTextForeground(crtxt)
 
             value = self.GetValueAsString()
-            if self.description != "":
-                value += " (" + self.description + ")"
             (w, h) = dc.GetTextExtent(value)
             dc.SetClippingRegion(self.value_rc)
-            dc.DrawText(value, self.value_rc.GetX() + 1,
+            dc.DrawText(value, self.value_rc.GetX() + 5,
                         self.value_rc.top + (self.value_rc.height - h)/2)
             self.show_value_tips = self.value_rc.width < w
             dc.DestroyClippingRegion()
@@ -881,56 +824,57 @@ class Property(object):
         win = None
         if style == PROP_CTRL_EDIT:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
-                              self.value_rc.GetTopLeft(), wx.DefaultSize,
-                              wx.TE_PROCESS_ENTER)
-
+                              style=wx.TE_PROCESS_ENTER)
+            if self.formatter:
+                validator = TextValidator(self, 'value', self.formatter,
+                                          False, None)
+                win.SetValidator(validator)
             win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
 
         elif style == PROP_CTRL_CHOICE:
-            win = wx.Choice(self.grid, wx.ID_ANY,
-                            self.value_rc.GetTopLeft(), wx.DefaultSize,
-                            list(six.iterkeys(self.choices)), wx.CB_SORT)
-            for i in range(win.GetCount()):
-                if win.GetString(i) == self.description:
-                    win.SetSelection(i)
-                    break
+            win = wx.Choice(self.grid, wx.ID_ANY)
+            if self.formatter:
+                validator = SelectorValidator(self, 'value', self.formatter,
+                                              True)
+                win.SetValidator(validator)
 
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
             win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
             win.Bind(wx.EVT_BUTTON, self.OnCtrlButton)
 
         elif style == PROP_CTRL_SLIDER:
-            nmax = int(self.value_max)
-            nmin = int(self.value_min)
-            val = int(self.value)
-
-            win = wx.Slider(self.grid, wx.ID_ANY, val, nmin, nmax,
-                            self.value_rc.GetTopLeft(), wx.DefaultSize,
-                            wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
+            win = wx.Slider(self.grid, wx.ID_ANY, value=int(self.value),
+                            style=wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
+            if self.formatter:
+                validator = SpinSliderValidator(self, 'value', self.formatter,
+                                                True)
+                win.SetValidator(validator)
 
         elif style == PROP_CTRL_SPIN:
-            nmax = int(self.value_max)
-            nmin = int(self.value_min)
-            val = int(self.value)
-            win = wx.SpinCtrl(self.grid, wx.ID_ANY, "%d"%val,
-                              self.value_rc.GetTopLeft(), wx.DefaultSize,
-                              wx.SP_ARROW_KEYS, nmin, nmax, val)
+            win = wx.SpinCtrl(self.grid, wx.ID_ANY, str(self.value),
+                              style=wx.SP_ARROW_KEYS)
+            if self.formatter:
+                validator = SpinSliderValidator(self, 'value', self.formatter,
+                                                True)
+                win.SetValidator(validator)
 
         elif style == PROP_CTRL_CHECK:
-            val = int(self.value)
-            win = wx.CheckBox(self.grid, wx.ID_ANY, "",
-                              self.value_rc.GetTopLeft(), wx.DefaultSize)
-            win.SetValue(val != 0)
+            win = wx.CheckBox(self.grid, wx.ID_ANY)
+            win.SetValue(int(self.value) != 0)
 
         elif style == PROP_CTRL_RADIO:
+            choices = []
+            if self.formatter and hasattr(self.formatter, 'validValues'):
+                choices = [x[1] for x in self.formatter.validValues()]
+
             win = wx.RadioBox(self.grid, wx.ID_ANY, "",
                               self.value_rc.GetTopLeft(), wx.DefaultSize,
-                              sorted(list(six.iterkeys(self.choices))), 5,
-                              wx.RA_SPECIFY_COLS)
-            for i in range(win.GetCount()):
-                if win.GetString(i) == self.description:
-                    win.SetSelection(i)
-                    break
+                              sorted(choices), 5, wx.RA_SPECIFY_COLS)
+
+            if self.formatter:
+                validator = RadioBoxValidator(self, 'value', self.formatter,
+                                              True)
+                win.SetValidator(validator)
 
         elif style == PROP_CTRL_COLOR:
             win = wx.ColourPickerCtrl(self.grid, wx.ID_ANY, wx.BLACK,
@@ -942,6 +886,8 @@ class Property(object):
                 pass
 
         if win:
+            if win.GetValidator():
+                win.GetValidator().TransferToWindow()
             self.window = win
             # the window size may be larger than the value rect, notify parent
             # grid to update it
@@ -1020,11 +966,10 @@ class Property(object):
         elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
             value = self.window.GetLabel()
 
-        elif style == PROP_CTRL_CHOICE:
-            comb = self.window
-            value = comb.GetString(comb.GetSelection())
-            if value in self.choices:
-                value = self.choices[value]
+        elif style in [PROP_CTRL_CHOICE, PROP_CTRL_RADIO]:
+            sel = self.window.GetSelection()
+            if sel >= 0 and sel < self.window.GetCount():
+                value = self.window.GetString(sel)
 
         elif style == PROP_CTRL_SLIDER:
             value = self.window.GetValue()
@@ -1034,13 +979,6 @@ class Property(object):
 
         elif style == PROP_CTRL_CHECK:
             value = self.window.GetValue()
-
-        elif style == PROP_CTRL_RADIO:
-            sel = self.window.GetSelection()
-            if sel >= 0 and sel < self.window.GetCount():
-                value = self.window.GetString(sel)
-                if value in self.choices:
-                    value = self.choices[value]
 
         elif style == PROP_CTRL_COLOR:
             clr = self.window.GetColour()
@@ -1067,29 +1005,6 @@ class Property(object):
             #the parent rejects the operation, restore the original value
             self.SetValue(value_old)
             return False
-
-    def UpdateDescription(self):
-        """update the description"""
-        self.description = ""
-        style = self.ctrl_type
-        if style == PROP_CTRL_EDIT:
-            pass
-        elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
-            pass
-        elif style in [PROP_CTRL_CHOICE, PROP_CTRL_RADIO]:
-            for k, v in six.iteritems(self.choices):
-                if v == self.value:
-                    self.description = k
-        elif style == PROP_CTRL_SLIDER:
-            pass
-        elif style == PROP_CTRL_SPIN:
-            pass
-        elif style == PROP_CTRL_CHECK:
-            if self.value:
-                self.description = "True"
-            else:
-                self.description = "False"
-        return True
 
     def SendPropEvent(self, event):
         """ send property grid event to parent"""

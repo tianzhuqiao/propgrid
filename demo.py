@@ -5,6 +5,7 @@ import wx.lib.agw.aui as aui
 import wx.py as py
 from . import propgrid as pg
 from . import formatters as fmt
+from . import enumtype
 
 class MainFrame(wx.Frame):
     def __init__(self):
@@ -70,7 +71,9 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
 
         p = g.InsertProperty('choice', 'choice', 1)
-        p.SetChoices({'item 1':1, 'item 2':2, 'item 3':3})
+        #p.SetChoices({'item 1':1, 'item 2':2, 'item 3':3})
+        choices = enumtype.EnumType(Monday=1, Tuesday=2, Wednesday=3)
+        p.SetFormatter(fmt.EnumFormatter(choices))
         p.SetControlStyle('choice')
         p.SetIndent(1)
 
@@ -84,20 +87,22 @@ class MainFrame(wx.Frame):
 
         p = g.InsertProperty('slider', 'slider', 50)
         p.SetControlStyle('slider')
-        p.SetRange(1, 100)
+        p.SetFormatter(fmt.IntFormatter(1, 101))
         p.SetIndent(1)
 
         p = g.InsertProperty('spin', 'spin', 50)
         p.SetControlStyle('spin')
-        p.SetRange(1, 100)
+        p.SetFormatter(fmt.IntFormatter(1, 100))
         p.SetIndent(1)
 
         p = g.InsertProperty('checkbox', 'checkbox', 0)
         p.SetControlStyle('checkbox')
+        p.SetFormatter(fmt.BoolFormatter())
         p.SetIndent(1)
 
-        p = g.InsertProperty('radiobox', 'radiobox', 0)
-        p.SetChoices({'item 1':1, 'item 2':2, 'item 3':3})
+        p = g.InsertProperty('radiobox', 'radiobox', 1)
+        #p.SetChoices({'item_1':1, 'item_2':2, 'item_3':3})
+        p.SetFormatter(fmt.EnumFormatter(choices))
         p.SetControlStyle('radiobox')
         p.SetIndent(1)
 

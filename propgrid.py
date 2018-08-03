@@ -6,6 +6,7 @@ import wx
 import wx.py.dispatcher as dp
 import wx.lib.agw.aui as aui
 from .prop import *
+from .formatters import *
 
 wxEVT_PROP_INSERT = wx.NewEventType()
 wxEVT_PROP_DELETE = wx.NewEventType()
@@ -828,7 +829,7 @@ class PropGrid(wx.ScrolledWindow):
         index2 = self.PropHitTest(pt)
         prop = self.GetProperty(index2)
         # insert a property? Let the parent to determine what to do
-        if PropGrid.drag_prop == None:
+        if PropGrid.drag_prop is None:
             dp.send('prop.drop', index=index2, prop=name, grid=self)
             return
 
@@ -876,18 +877,11 @@ class PropSettings(wx.Dialog):
         else:
             self.items = (('name', 'Name', '', PROP_CTRL_EDIT),
                           ('label', 'Label', '', PROP_CTRL_EDIT),
-                          ('value', 'Value', '', PROP_CTRL_EDIT),
-                          ('description', 'Description', 'text shown next to the value',
-                           PROP_CTRL_EDIT),
-                          ('value_max', 'Max value', '', PROP_CTRL_SPIN),
-                          ('value_min', 'Min value', '', PROP_CTRL_SPIN),
                           ('indent', 'Indent level', '', PROP_CTRL_SPIN),
                           ('show_check', 'Show check icon', '', PROP_CTRL_CHECK),
                           ('enable', 'Enable', '', PROP_CTRL_CHECK),
                           ('italic', 'Italic', '', PROP_CTRL_CHECK),
                           ('readonly', 'Read only', '', PROP_CTRL_CHECK),
-                          ('ctrl_type', 'Control window type', '', PROP_CTRL_CHOICE),
-                          ('choices', 'Choice list', '', PROP_CTRL_EDIT),
                           ('text_clr', 'Normal text color', '', PROP_CTRL_COLOR),
                           ('text_clr_sel', 'Selected text color', '', PROP_CTRL_COLOR),
                           ('text_clr_disabled', 'Disable text color', '', PROP_CTRL_COLOR),
@@ -904,20 +898,9 @@ class PropSettings(wx.Dialog):
             pp.SetLabelTip(label)
             pp.SetValueTip(tip)
             pp.SetControlStyle(ctrl)
-            if name == 'ctrl_type':
-                choices = {'none':PROP_CTRL_NONE,
-                           'editbox':PROP_CTRL_EDIT, 'choice':PROP_CTRL_CHOICE,
-                           'select file':PROP_CTRL_FILE_SEL,
-                           'select folder':PROP_CTRL_FOLDER_SEL,
-                           'slider':PROP_CTRL_SLIDER, 'spin':PROP_CTRL_SPIN,
-                           'checkbox':PROP_CTRL_CHECK, 'radio button':PROP_CTRL_RADIO,
-                           'colorpicker':PROP_CTRL_COLOR}
-                pp.SetChoices(choices)
+            if ctrl == PROP_CTRL_CHECK:
                 pp.SetValue(v)
-            if name in ['choices']:
-                pp.SetValue(json.dumps(v))
-            elif ctrl == PROP_CTRL_CHECK:
-                pp.SetValue(v)
+                pp.SetFormatter(BoolFormatter())
             elif ctrl == PROP_CTRL_COLOR:
                 pp.SetValue(v)
                 pp.SetBgColor(v, v, v)
@@ -926,11 +909,10 @@ class PropSettings(wx.Dialog):
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
             elif ctrl in [PROP_CTRL_SPIN, PROP_CTRL_SLIDER]:
-                pp.SetRange(-2**31-1, 2**31)
+                pp.SetFormatter(IntFormatter(-2**31-1, 2**31))
                 pp.SetValue(v)
             else:
                 pp.SetValue(v)
-            pp.SetShowCheck(False)
 
         sz = wx.BoxSizer(wx.VERTICAL)
         sz.Add(self.propgrid, 1, wx.EXPAND | wx.ALL, 1)
@@ -961,12 +943,8 @@ class PropSettings(wx.Dialog):
 
         for (name, _, _, ctrl) in self.items:
             v = self.propgrid.GetProperty(name)
-            if name in ['choices']:
-                self.prop.SetChoices(json.loads(v.GetValue()))
-            elif ctrl == PROP_CTRL_CHECK:
+            if ctrl == PROP_CTRL_CHECK:
                 setattr(self.prop, name, bool(int(v.GetValue())))
-            elif name == 'ctrl_type':
-                self.prop.SetControlStyle(int(v.GetValue()))
             else:
                 setattr(self.prop, name, type(getattr(self.prop, name))(v.GetValue()))
         event.Skip()

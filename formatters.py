@@ -228,6 +228,16 @@ class BinFormatter(IntFormatter):
     def coerce(self, str_value):
         return int(str_value, 2)
 
+class BoolFormatter(IntFormatter):
+    def format(self, value):
+        return str(bool(value))
+
+    def coerce(self, str_value):
+        str_value = str_value.strip()
+        if str_value.lower() == 'true':
+            return 1
+        return 0
+
 class Int8Formatter(IntFormatter):
     pass
 
