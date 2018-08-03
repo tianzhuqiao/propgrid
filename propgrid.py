@@ -599,7 +599,8 @@ class PropGrid(wx.ScrolledWindow):
 
     def OnPaint(self, event):
         """draw the property"""
-        dc = wx.BufferedPaintDC(self)
+        dc = wx.GCDC(wx.PaintDC(self))
+        #dc = wx.BufferedPaintDC(self)
         self.DoPrepareDC(dc)
 
         rc = self.GetDrawRect()
