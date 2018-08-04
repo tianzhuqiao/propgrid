@@ -77,11 +77,13 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
 
         p = g.InsertProperty('dir_dialog', 'folder', '/home')
-        p.SetControlStyle('dir_dialog')
+        #p.SetControlStyle('dir_dialog')
+        p.SetFormatter(fmt.PathFormatter(False, 'folder'))
         p.SetIndent(1)
 
         p = g.InsertProperty('file_dialog', 'file', '/home/temp.txt')
-        p.SetControlStyle('file_dialog')
+        #p.SetControlStyle('file_dialog')
+        p.SetFormatter(fmt.PathFormatter(False, 'file'))
         p.SetIndent(1)
 
         p = g.InsertProperty('slider', 'slider', 50)

@@ -831,6 +831,12 @@ class Property(object):
                 style = PROP_CTRL_CHOICE
             elif isinstance(self.formatter, BoolFormatter):
                 style = PROP_CTRL_CHECK
+            elif isinstance(self.formatter, PathFormatter):
+                if self.formatter.types == 'file':
+                    style = PROP_CTRL_FILE_SEL
+                elif self.formatter.types == 'folder':
+                    style = PROP_CTRL_FOLDER_SEL
+
         win = None
         if style == PROP_CTRL_EDIT:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
@@ -848,9 +854,13 @@ class Property(object):
                                               True)
                 win.SetValidator(validator)
 
-        elif style in [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]:
+        elif style == PROP_CTRL_FILE_SEL:
             win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
-            win.Bind(wx.EVT_BUTTON, self.OnCtrlButton)
+            win.Bind(wx.EVT_BUTTON, self.OnSelectFile)
+
+        elif style == PROP_CTRL_FOLDER_SEL:
+            win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
+            win.Bind(wx.EVT_BUTTON, self.OnSelectFolder)
 
         elif style == PROP_CTRL_SLIDER:
             win = wx.Slider(self.grid, wx.ID_ANY, value=int(self.value),
@@ -923,20 +933,20 @@ class Property(object):
         # color window does not work on Mac
         #wx.CallAfter(self.OnTextEnter)
 
-    def OnCtrlButton(self, evt):
-        if self.ctrl_type == PROP_CTRL_FILE_SEL:
-            style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-            dlg = wx.FileDialog(self.grid, "Choose a file", self.GetValueAsString(),
-                                "", "*.*", style)
-            if dlg.ShowModal() == wx.ID_OK:
-                self.SetValue(dlg.GetPath())
-            dlg.Destroy()
-        elif self.ctrl_type == PROP_CTRL_FOLDER_SEL:
-            dlg = wx.DirDialog(self.grid, "Choose input directory", self.GetValueAsString(),
-                               wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
-            if dlg.ShowModal() == wx.ID_OK:
-                self.SetValue(dlg.GetPath())
-            dlg.Destroy()
+    def OnSelectFile(self, evt):
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        dlg = wx.FileDialog(self.grid, "Choose a file", self.GetValueAsString(),
+                            "", "*.*", style)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+    def OnSelectFolder(self, evt):
+        dlg = wx.DirDialog(self.grid, "Choose input directory", self.GetValueAsString(),
+                           wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetPath())
+        dlg.Destroy()
 
     def LayoutControl(self):
         """re-positioning the control"""
