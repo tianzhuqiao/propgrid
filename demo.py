@@ -137,7 +137,7 @@ class MainFrame(wx.Frame):
         chex = self.rgb2hex(self.clr_map[:, :-1])
         p = self.propgrid.InsertSeparator("color", "color")
         for i, c in enumerate(chex):
-            p = self.propgrid.InsertProperty("clr-%d"%i, '%d'%i, c)
+            p = self.propgrid.InsertProperty("clr-%d"%i, '%d'%i, wx.Colour(c))
             #p.SetControlStyle(pg.PROP_CTRL_COLOR)
             p.SetBgColor(c, c, c)
             p.SetFormatter(fmt.ColorFormatter())

@@ -550,19 +550,16 @@ class DateTimeFormatter(DateFormatter):
         return value
 
 class ColorFormatter(Formatter):
-
-    # Storage format HTML-like syntax: #xxxxxx.
+    # Storage formate: wx.Colour
+    # Presentation format HTML-like syntax: #xxxxxx.
     def validate(self, str_value):
         clr = wx.Colour()
         return clr.Set(str_value)
 
     def format(self, value):
-        try:
-            clr = wx.Colour()
-            clr.Set(value)
-            return clr.GetAsString(wx.C2S_HTML_SYNTAX)
-        except:
-            return ""
+        if isinstance(value, six.string_types):
+            return value
+        return value.GetAsString(wx.C2S_HTML_SYNTAX)
 
     def coerce(self, str_value):
         try:
