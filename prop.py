@@ -836,7 +836,8 @@ class Property(object):
                     style = PROP_CTRL_FILE_SEL
                 elif self.formatter.types == 'folder':
                     style = PROP_CTRL_FOLDER_SEL
-
+            elif isinstance(self.formatter, ColorFormatter):
+                style = PROP_CTRL_COLOR
         win = None
         if style == PROP_CTRL_EDIT:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),

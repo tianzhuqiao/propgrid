@@ -27,6 +27,7 @@ Formatters for converting and validating data values.
 
 import os, sys, errno, copy, re, time
 import six
+import wx
 
 class Formatter(object):
     """
@@ -247,28 +248,24 @@ class BoolFormatter(IntFormatter):
         return 0
 
 class Int8Formatter(IntFormatter):
-    pass
+    def __init__(self, min_val=-2**7, max_val=2**7-1, **kwargs):
+        super(Int8Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class Int16Formatter(IntFormatter):
-    pass
+    def __init__(self, min_val=-2**15, max_val=2**15-1, **kwargs):
+        super(Int16Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class Int24Formatter(IntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=-2**23, max_val=2**23-1, **kwargs):
+        super(Int24Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class Int32Formatter(IntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=-2**31, max_val=2**31-1, **kwargs):
+        super(Int32Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class Int64Formatter(IntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=-2**63, max_val=2**63-1, **kwargs):
+        super(Int64Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class UIntFormatter(IntFormatter):
     """Unsigned integer."""
@@ -278,25 +275,20 @@ class UIntFormatter(IntFormatter):
         self.min_val = max(0, min_val)
 
 class UInt8Formatter(UIntFormatter):
-    pass
+    def __init__(self, min_val=0, max_val=2**8-1, **kwargs):
+        super(UInt8Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class UInt16Formatter(UIntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=0, max_val=2**16-1, **kwargs):
+        super(UInt16Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class UInt24Formatter(UIntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=0, max_val=2**24-1, **kwargs):
+        super(UInt24Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class UInt32Formatter(UIntFormatter):
-    def coerce(self, str_value):
-        if str_value:
-            return int(str_value)
-        return str_value
+    def __init__(self, min_val=0, max_val=2**32-1, **kwargs):
+        super(UInt32Formatter, self).__init__(min_val, max_val, **kwargs)
 
 class FloatFormatter(Formatter):
     """Signed or unsigned floating-point number."""
@@ -556,6 +548,28 @@ class DateTimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
         date, time = re.split(r'[ ]+', str_value)
         return datef.validate(date) and timef.validate(time)
 
+class ColorFormatter(Formatter):
+
+    # Storage format HTML-like syntax: #xxxxxx.
+    def validate(self, str_value):
+        clr = wx.Colour()
+        return clr.Set(str_value)
+
+    def format(self, value):
+        try:
+            clr = wx.Colour()
+            clr.Set(value)
+            return clr.GetAsString(wx.C2S_HTML_SYNTAX)
+        except:
+            return ""
+
+    def coerce(self, str_value):
+        try:
+            clr = wx.Colour()
+            clr.Set(value)
+            return clr.GetAsString(wx.C2S_HTML_SYNTAX)
+        except:
+            return ""
 
 if __name__ == '__main__':
 
@@ -639,4 +653,18 @@ if __name__ == '__main__':
              ('-0b1', False)]
     test(tests, BinFormatter(0, 100), 'BinFormatter')
 
-
+    tests = [('10', True),
+             ('0', True),
+             ('127', True),
+             ('128', False),
+             ('-1', True),
+             ('-128', True),
+             ('-129', False),]
+    test(tests, Int8Formatter(), 'Int8Formatter')
+    tests = [('10', True),
+             ('0', True),
+             ('127', True),
+             ('255', True),
+             ('256', False),
+             ('-1', False),]
+    test(tests, UInt8Formatter(), 'UInt8Formatter')
