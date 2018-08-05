@@ -25,7 +25,7 @@
 Formatters for converting and validating data values.
 """
 
-import os, sys, errno, copy, re, time
+import os, sys, errno, copy, re
 import six
 import wx
 
@@ -47,7 +47,7 @@ class Formatter(object):
     # Default (dummy) format routine
     def format(self, value):
         """Format a value for presentation in the UI."""
-        if value == None:
+        if value is None:
             return ''
         return str(value)
 
@@ -450,11 +450,11 @@ class TimeElapsedFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Elapsed time string (HH:MM:SS)."""
     re_validation = '^([1][0-2]|[0]?[0-9]):[0-5][0-9](:[0-5][0-9])?$'
 
-class DateFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class DateFormatter(Formatter):
     """
     Date string (YYYY-MM-DD).
 
-    Storage format:      YYYY-MM-DD
+    Storage format:      wx.DateTime
     Presentation format: YYYY-MM-DD
 
     Accepts only YYYY-MM-DD format (allows variant separators '/' and '.').
@@ -462,16 +462,27 @@ class DateFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     Leading zeros optional in month and day.
     Does not enforce # of days in month.
     """
-    re_validation = r'^[1-2][0-9]{3}([-/.])([0][1-9]|[1][0-2])\1([0][1-9]|[12][0-9]|[3][0-1])$'
+
+    def __init__(self, fmt='%Y-%m-%d', **kwargs):
+        super(DateFormatter, self).__init__(**kwargs)
+        self.str_format = fmt
+
+    def validate(self, str_value):
+        value = wx.DateTime()
+        return value.ParseDate(str_value) != -1
+
+    def format(self, value):
+        return value.Format(self.str_format)
 
     def coerce(self, str_value):
         """Convert alternate date separators to '-'."""
-        return re.sub(r'[/.]', '-', str_value)
+        value = wx.DateTime()
+        value.ParseDate(str_value)
+        return value
 
 class DateFormatterMDY(DateFormatter):
     """Alternate date string (MM-DD-YYYY).
 
-    Storage format:      YYYY-MM-DD
     Presentation format: MM-DD-YYYY
 
     Accepts only MM-DD-YYYY format  (allows variant separators '/' and '.').
@@ -479,20 +490,10 @@ class DateFormatterMDY(DateFormatter):
     Leading zeros optional in month and day.
     Does not enforce # of days in month.
     """
-    re_validation = r'^([0][1-9]|[1][0-2])([-/.])([0][1-9]|[12][0-9]|[3][0-1])\1[12][0-9]{3}$'
+    def __init__(self, fmt='%m-%d-%Y', **kwargs):
+        super(DateFormatterMDY, self).__init__(fmt, **kwargs)
 
-    def format(self, value):
-        dt = time.strptime(value, '%Y-%m-%d')
-        return time.strftime('%m-%d-%Y', dt)
-
-    def coerce(self, str_value):
-#        value = re.sub(r'[/.]', '-', value)
-#        dt = time.strptime(value, '%m-%d-%Y')
-#        return time.strftime('%Y-%m-%d', dt)
-        m, d, y = re.split('[-/.]', str_value)
-        return '%04d-%02d-%02d' % (int(y), int(m), int(d))
-
-class TimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class TimeFormatter(DateFormatter):
     """
     Time string (12-hour or 24-hour format, with or without seconds or am/pm).
 
@@ -501,23 +502,18 @@ class TimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
 
     Accepts 12-hour or 24-hour format, with or without seconds or am/pm.
     """
+    def __init__(self, fmt='%H:%M:%S', **kwargs):
+        super(TimeFormatter, self).__init__(fmt, **kwargs)
 
-    reTime24 = r'(([0]?[0-9]|[1][0-9]|[2][0-3]):[0-5][0-9](:[0-5][0-9])?)'
-    reTimeAP = r'(([1][0-2]|[0]?[0-9]):[0-5][0-9](:[0-5][0-9])?[ ]*([aApP][mM])?)'
-    re_validation = r'^(%s|%s)$' % (reTime24, reTimeAP)
-
-    def format(self, value):
-        return ':'.join(value.split(':')[:2])
+    def validate(self, str_value):
+        value = wx.DateTime()
+        return value.ParseTime(str_value) != -1
 
     def coerce(self, str_value):
-        # TODO pass validate() may still fail here, e.g., 10:15am
-        for fmt in ('%H:%M:%S', '%H:%M', '%I:%M:%S %p', '%I:%M %p', '%I:%M:%S'):
-            try:
-                dt = time.strptime(str_value, fmt)
-                break
-            except ValueError:
-                pass
-        return time.strftime('%H:%M:%S', dt)
+        """Convert alternate date separators to '-'."""
+        value = wx.DateTime()
+        value.ParseTime(str_value)
+        return value
 
 class TimeFormatter12H(TimeFormatter):
     """
@@ -528,11 +524,10 @@ class TimeFormatter12H(TimeFormatter):
                          (aa may be 'am' or 'pm')
     """
 
-    def format(self, value):
-        dt = time.strptime(value, '%H:%M:%S')
-        return time.strftime('%I:%M %p', dt)
+    def __init__(self, fmt='%I:%M:%S %p', **kwargs):
+        super(TimeFormatter12H, self).__init__(fmt, **kwargs)
 
-class DateTimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
+class DateTimeFormatter(DateFormatter):
     """
     Date/time string.
 
@@ -541,12 +536,18 @@ class DateTimeFormatter(six.with_metaclass(FormatterMeta, Formatter)):
 
     # Storage format: YYYY-MM-DD HH:MM:SS -- 24-hour format.
     # Presentation format: same as storage format.
+    def __init__(self, fmt='%Y-%m-%d %H:%M:%S', **kwargs):
+        super(DateTimeFormatter, self).__init__(fmt, **kwargs)
 
     def validate(self, str_value):
-        datef = DateFormatter()
-        timef = TimeFormatter()
-        date, time = re.split(r'[ ]+', str_value)
-        return datef.validate(date) and timef.validate(time)
+        value = wx.DateTime()
+        return value.ParseDateTime(str_value) != -1
+
+    def coerce(self, str_value):
+        """Convert alternate date separators to '-'."""
+        value = wx.DateTime()
+        value.ParseDateTime(str_value)
+        return value
 
 class ColorFormatter(Formatter):
 
@@ -566,7 +567,7 @@ class ColorFormatter(Formatter):
     def coerce(self, str_value):
         try:
             clr = wx.Colour()
-            clr.Set(value)
+            clr.Set(str_value)
             return clr.GetAsString(wx.C2S_HTML_SYNTAX)
         except:
             return ""

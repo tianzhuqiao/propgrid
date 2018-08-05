@@ -1,4 +1,3 @@
-import datetime
 import numpy as np
 import wx
 import wx.lib.agw.aui as aui
@@ -52,17 +51,18 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
         p.SetFormatter(fmt.FloatFormatter())
 
-        p = g.InsertProperty('date', 'date', '2018-07-28')
+        p = g.InsertProperty('date', 'date', wx.DateTime.Today())
         p.SetIndent(1)
         p.SetFormatter(fmt.DateFormatter())
 
-        p = g.InsertProperty('time', 'time', '10:15:16')
+        p = g.InsertProperty('time', 'time', wx.DateTime.Now())
         p.SetIndent(1)
         p.SetFormatter(fmt.TimeFormatter())
 
-        p = g.InsertProperty('datetime', 'datetime', '2018-07-28 10:15:16')
+        p = g.InsertProperty('datetime', 'datetime', wx.DateTime.Now())
         p.SetIndent(1)
         p.SetFormatter(fmt.DateTimeFormatter())
+        p.SetControlStyle('none')
 
         # control
         p = g.InsertSeparator('type', 'type')
@@ -192,7 +192,7 @@ class MainFrame(wx.Frame):
     def OnTimer(self, event):
         p = self.propgrid.GetProperty('datetime')
         if p:
-            p.SetValue(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            p.SetValue(wx.DateTime.Now())
 
 class RunApp(wx.App):
     def __init__(self):

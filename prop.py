@@ -3,6 +3,7 @@ import traceback
 import copy
 import six
 import wx
+import wx.adv
 from .propxpm import radio_xpm, tree_xpm
 from .validators import *
 from .formatters import *
@@ -50,7 +51,9 @@ PROP_CTRL_SPIN = 7
 PROP_CTRL_CHECK = 8
 PROP_CTRL_RADIO = 9
 PROP_CTRL_COLOR = 10
-PROP_CTRL_NUM = 11
+PROP_CTRL_DATE = 11
+PROP_CTRL_TIME = 12
+PROP_CTRL_NUM = 13
 
 PROP_HIT_NONE = 0
 PROP_HIT_EXPAND = 1
@@ -192,7 +195,8 @@ class Property(object):
                      'dir_dialog': PROP_CTRL_FOLDER_SEL,
                      'slider': PROP_CTRL_SLIDER, 'spin': PROP_CTRL_SPIN,
                      'checkbox': PROP_CTRL_CHECK, 'radiobox': PROP_CTRL_RADIO,
-                     'color': PROP_CTRL_COLOR}
+                     'color': PROP_CTRL_COLOR, 'date': PROP_CTRL_DATE,
+                     'time': PROP_CTRL_TIME}
         if isinstance(style, six.string_types):
             style = str_style.get(style, None)
         if style < PROP_CTRL_NONE or style >= PROP_CTRL_NUM:
@@ -838,6 +842,10 @@ class Property(object):
                     style = PROP_CTRL_FOLDER_SEL
             elif isinstance(self.formatter, ColorFormatter):
                 style = PROP_CTRL_COLOR
+            elif isinstance(self.formatter, DateFormatter):
+                style = PROP_CTRL_DATE
+                if isinstance(self.formatter, TimeFormatter):
+                    style = PROP_CTRL_TIME
         win = None
         if style == PROP_CTRL_EDIT:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
@@ -906,6 +914,19 @@ class Property(object):
             except ValueError:
                 pass
 
+        elif style == PROP_CTRL_DATE:
+            win = wx.adv.DatePickerCtrl(self.grid, wx.ID_ANY)
+            try:
+                win.SetValue(self.value)
+            except ValueError:
+                pass
+
+        elif style == PROP_CTRL_TIME:
+            win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
+            try:
+                win.SetValue(self.value)
+            except ValueError:
+                pass
         if win:
             if win.GetValidator():
                 win.GetValidator().TransferToWindow()
@@ -1007,6 +1028,11 @@ class Property(object):
             clr = self.window.GetColour()
             value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
 
+        elif isinstance(self.window, wx.adv.DatePickerCtrl) or\
+             isinstance(self.window, wx.adv.TimePickerCtrl):
+            value = self.window.GetValue()
+            if self.formatter:
+                value = self.formatter.format(value)
         try:
             if self.formatter:
                 if self.formatter.validate(str(value)):
