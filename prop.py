@@ -4,7 +4,6 @@ import copy
 import six
 import wx
 import wx.adv
-from .propxpm import radio_xpm, tree_xpm
 from .validators import *
 from .formatters import *
 
@@ -64,20 +63,8 @@ PROP_HIT_VALUE = 5
 PROP_HIT_EDGE_BOTTOM = 6
 PROP_HIT_EDGE_TOP = 7
 
-def BitmapFromXPM(xpm):
-    xpm_b = [x.encode('utf-8') for x in xpm]
-    return wx.Bitmap(xpm_b)
-
 class Property(object):
-    VALIDATE_NONE = 0
-    VALIDATE_DEC = 1
-    VALIDATE_HEX = 2
-    VALIDATE_OCT = 3
-    VALIDATE_BIN = 4
-    MARGIN_X = 2
 
-    img_check = None
-    img_expand = None
     def __init__(self, grid, name, label, value):
         self.grid = grid
         self.name = name
@@ -115,12 +102,6 @@ class Property(object):
         self.separator = False
         self.data = None
         self.formatter = None
-
-        if type(self).img_check is None or type(self).img_expand is None:
-            type(self).img_check = wx.ImageList(16, 16, True, 4)
-            type(self).img_expand = wx.ImageList(12, 12, True, 2)
-            type(self).img_check.Add(BitmapFromXPM(radio_xpm))
-            type(self).img_expand.Add(BitmapFromXPM(tree_xpm))
 
     def duplicate(self):
         """
@@ -506,8 +487,9 @@ class Property(object):
         """set the client rect"""
         if self.client_rc != rc:
             self.client_rc = wx.Rect(*rc)
-            self.PrepareDrawRect()
-            self.LayoutControl()
+            # redraw the item
+            self.Refresh()
+            wx.CallAfter(self.LayoutControl)
 
     def GetClientRect(self):
         """return the client rect"""
@@ -540,200 +522,6 @@ class Property(object):
     def GetShowValueTips(self):
         """return whether value tooltip is allowed"""
         return self.show_value_tips
-
-    def DrawGripper(self, dc):
-        # draw gripper
-        if self.gripper_clr:
-            pen = wx.Pen(wx.BLACK, 1, wx.TRANSPARENT)
-            pen.SetColour(self.gripper_clr)
-            pen.SetStyle(wx.TRANSPARENT)
-
-            dc.SetPen(pen)
-
-            brush = wx.Brush(self.gripper_clr)
-            brush.SetStyle(wx.SOLID)
-            dc.SetBrush(brush)
-            rcg = self.gripper_rc
-            dc.DrawRectangle(rcg.x, rcg.y+1, 3, rcg.height-1)
-
-    def DrawCheck(self, dc):
-        # draw radio button
-        if self.IsShowCheck():
-            state = 0
-            if not self.IsEnabled():
-                state = 1
-            elif self.IsChecked():
-                state = 2
-                if self.IsActivated():
-                    state = 3
-
-            if self.img_check.GetImageCount() == 4:
-                (w, h) = self.img_check.GetSize(0)
-                x = self.radio_rc.x+(self.radio_rc.width-w)/2
-                y = self.radio_rc.y+(self.radio_rc.height-h)/2+1
-                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-
-    def DrawSplitter(self, dc):
-        # draw splitter
-        rcs = self.splitter_rc
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
-        dc.DrawLine(rcs.left, rcs.top, rcs.left, rcs.bottom)
-        dc.DrawLine(rcs.right-1, rcs.top, rcs.right-1, rcs.bottom)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rcs.left+1, rcs.top, rcs.left+1, rcs.bottom)
-        dc.DrawLine(rcs.right, rcs.top, rcs.right, rcs.bottom)
-
-    def DrawLabel(self, dc):
-        # draw label
-        if not self.IsEnabled() or self.IsReadonly():
-            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
-        else:
-            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
-        dc.SetTextForeground(clr)
-        dc.SetClippingRegion(self.label_rc)
-        (w, h) = dc.GetTextExtent(self.label)
-
-        dc.DrawText(self.label, self.label_rc.GetX(), self.label_rc.GetY() +
-                    (self.label_rc.height - h)/2)
-        self.show_label_tips = w > self.label_rc.width
-        dc.DestroyClippingRegion()
-
-    def DrawValue(self, dc):
-        # draw value
-        self.show_value_tips = False
-        if self.window is None:
-            crbg = self.bg_clr
-            crtxt = wx.BLACK
-            if not self.enable or self.IsReadonly():
-                crtxt = self.text_clr_disabled
-                crbg = self.bg_clr_disabled
-            elif self.activated:
-                crtxt = self.text_clr_sel
-                crbg = self.bg_clr_sel
-            else:
-                crtxt = self.text_clr
-                crbg = self.bg_clr
-
-            dc.SetPen(wx.Pen(crtxt, 1, wx.TRANSPARENT))
-            dc.SetBrush(wx.Brush(crbg))
-
-            dc.DrawRectangle(self.value_rc.x, self.value_rc.y,
-                             self.value_rc.width, self.value_rc.height)
-
-            dc.SetTextForeground(crtxt)
-
-            value = self.GetValueAsString()
-            (w, h) = dc.GetTextExtent(value)
-            dc.SetClippingRegion(self.value_rc)
-            dc.DrawText(value, self.value_rc.GetX() + 5,
-                        self.value_rc.top + (self.value_rc.height - h)/2)
-            self.show_value_tips = self.value_rc.width < w
-            dc.DestroyClippingRegion()
-
-    def DrawItem(self, dc):
-        """draw the property"""
-        if not self.IsVisible():
-            return
-
-        dc.SetBackgroundMode(wx.TRANSPARENT)
-
-        rc = self.GetClientRect()
-        self.PrepareDrawRect()
-
-        # draw background
-        bg = self.GetGrid().GetBackgroundColour()
-        pen = wx.Pen(wx.BLACK, 1, wx.TRANSPARENT)
-        dc.SetPen(pen)
-        brush = wx.Brush(bg)
-        dc.SetBrush(brush)
-        dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
-        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
-        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
-        dc.DrawLine(rc.right-1, rc.top, rc.right-1, rc.bottom)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
-        dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
-
-        if self.IsItalic():
-            dc.SetFont(wx.ITALIC_FONT)
-        else:
-            dc.SetFont(wx.NORMAL_FONT)
-        # draw select rectangle
-        if self.activated:
-            pen.SetColour(wx.BLACK)
-            pen.SetStyle(wx.DOT)
-
-            dc.SetPen(pen)
-            brush.SetStyle(wx.TRANSPARENT)
-            dc.SetBrush(brush)
-            dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
-
-        if self.HasChildren():
-            if self.img_expand.GetImageCount() == 2:
-                (w, h) = self.img_expand.GetSize(0)
-                x = self.expander_rc.x+(self.expander_rc.width-w)/2
-                y = self.expander_rc.y+(self.expander_rc.height-h)/2+1
-                idx = 0
-                if not self.expanded:
-                    idx = 1
-                self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-
-        self.DrawGripper(dc)
-        self.DrawLabel(dc)
-
-        # separator does not have radio button, splitter bar and value sections
-        if self.IsSeparator():
-            return
-
-        self.DrawCheck(dc)
-        self.DrawSplitter(dc)
-        self.DrawValue(dc)
-
-    def PrepareDrawRect(self):
-        """calculate the rect for each section"""
-        MARGIN_X = type(self).MARGIN_X
-        rc = self.GetClientRect()
-        x = rc.x
-
-        self.gripper_rc = wx.Rect(*rc)
-        self.gripper_rc.x = x + MARGIN_X + self.indent*20
-        self.gripper_rc.SetWidth(6)
-        x = self.gripper_rc.right
-
-        self.expander_rc = wx.Rect(*rc)
-        self.expander_rc.x = x + MARGIN_X
-        w, _ = self.img_expand.GetSize(0)
-        self.expander_rc.SetWidth(w+2)
-        x = self.expander_rc.right
-
-        self.radio_rc = wx.Rect(*rc)
-        self.radio_rc.x = x + MARGIN_X
-        w, _ = self.img_check.GetSize(0)
-        self.radio_rc.SetWidth(w+2)
-        x = self.radio_rc.right
-
-        self.label_rc = wx.Rect(*rc)
-        self.label_rc.x = x + MARGIN_X*2
-        if not self.IsSeparator():
-            self.label_rc.SetRight(self.title_width)
-            x = self.label_rc.right
-
-            self.splitter_rc = wx.Rect(*rc)
-            self.splitter_rc.x = x + MARGIN_X
-            self.splitter_rc.SetWidth(8)
-
-            self.value_rc = wx.Rect(*rc)
-            self.value_rc.SetX(self.splitter_rc.right)
-            self.value_rc.SetWidth(rc.right-self.splitter_rc.right)
-            self.value_rc.Deflate(1, 1)
-        else:
-            # separator does not have splitter & value
-            self.label_rc.SetWidth(rc.right-self.radio_rc.right)
-            self.splitter_rc = wx.Rect(rc.right, rc.top, 0, 0)
-            self.value_rc = wx.Rect(rc.right, rc.top, 0, 0)
-
 
     def HitTest(self, pt):
         """find the mouse position relative to the property"""

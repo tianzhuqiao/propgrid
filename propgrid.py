@@ -7,6 +7,7 @@ import wx.py.dispatcher as dp
 import wx.lib.agw.aui as aui
 from .prop import *
 from .formatters import *
+from .propart import PropArtDefault
 
 wxEVT_PROP_INSERT = wx.NewEventType()
 wxEVT_PROP_DELETE = wx.NewEventType()
@@ -94,6 +95,7 @@ class PropGrid(wx.ScrolledWindow):
         self.resize_mode = self.RESIZE_NONE
 
         self._props = []
+        self._art = PropArtDefault()
 
         # cursor
         self.resize_cursor_horz = wx.Cursor(wx.CURSOR_SIZEWE)
@@ -626,7 +628,7 @@ class PropGrid(wx.ScrolledWindow):
             rc_prop = p.GetClientRect()
             if rc.Intersects(rc_prop):
                 p.SetTitleWidth(self.title_width)
-                p.DrawItem(dc)
+                self._art.DrawItem(dc, p)
 
     def OnSize(self, evt):
         """resize the properties"""
