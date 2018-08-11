@@ -137,6 +137,13 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(EVT_PROP_CLICK_CHECK, self.OnPropEventsHandler)
         self.Bind(wx.EVT_MENU, self.OnProcessCommand)
 
+    def SetArtProvider(self, art):
+        self._art = art
+        self.Refresh()
+
+    def GetArtProvider(self):
+        return self._art
+
     def AppendProperty(self, name, label="", value="", update=True):
         return self.InsertProperty(name, label, value, -1, update)
 

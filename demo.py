@@ -5,8 +5,11 @@ import wx.py as py
 from . import propgrid as pg
 from . import formatters as fmt
 from . import enumtype
+from . import propart as pa
 
 class MainFrame(wx.Frame):
+    ID_ART_NATIVE = wx.NewId()
+    ID_ART_DEFAULT = wx.NewId()
     def __init__(self):
         wx.Frame.__init__(self, None, -1, 'PropGrid Demo', size=(800, 600))
         self._mgr = aui.AuiManager()
@@ -18,6 +21,21 @@ class MainFrame(wx.Frame):
                               | aui.AUI_MGR_SMOOTH_DOCKING
                               | aui.AUI_MGR_USE_NATIVE_MINIFRAMES
                               | aui.AUI_MGR_LIVE_RESIZE)
+        menubar = wx.MenuBar()
+        viewMenu = wx.Menu()
+        item = wx.MenuItem(viewMenu, self.ID_ART_DEFAULT, text="Default Art",
+                           kind=wx.ITEM_CHECK)
+        viewMenu.Append(item)
+        item = wx.MenuItem(viewMenu, self.ID_ART_NATIVE, text="Native Art",
+                           kind=wx.ITEM_CHECK)
+        viewMenu.Append(item)
+        menubar.Append(viewMenu, '&Options')
+        self.SetMenuBar(menubar)
+
+        self.Bind(wx.EVT_TOOL, self.OnProcessTool)
+        self.Bind(wx.EVT_UPDATE_UI, self.OnUpdateCmdUI)
+
+
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
 
@@ -34,6 +52,10 @@ class MainFrame(wx.Frame):
         p = g.InsertProperty('italic', 'italic', 'hello world!')
         p.SetIndent(1)
         p.Italic()
+
+        p = g.InsertProperty('with check', 'with check', 'hello world!')
+        p.SetIndent(1)
+        p.SetShowCheck(True)
 
         p = g.InsertProperty('integer', 'integer', 42)
         p.SetIndent(1)
@@ -193,6 +215,24 @@ class MainFrame(wx.Frame):
         p = self.propgrid.GetProperty('datetime')
         if p:
             p.SetValue(wx.DateTime.Now())
+
+    def OnUpdateCmdUI(self, event):
+        eid = event.GetId()
+        if eid == self.ID_ART_NATIVE:
+            event.Check(type(self.propgrid.GetArtProvider()) == pa.PropArtNative)
+        elif eid == self.ID_ART_DEFAULT:
+            event.Check(type(self.propgrid.GetArtProvider()) == pa.PropArtDefault)
+        else:
+            event.Skip()
+
+    def OnProcessTool(self, event):
+        eid = event.GetId()
+        if eid == self.ID_ART_NATIVE:
+            self.propgrid.SetArtProvider(pa.PropArtNative())
+        elif eid == self.ID_ART_DEFAULT:
+            self.propgrid.SetArtProvider(pa.PropArtDefault())
+        else:
+            event.Skip()
 
 class RunApp(wx.App):
     def __init__(self):

@@ -5,47 +5,45 @@ def BitmapFromXPM(xpm):
     xpm_b = [x.encode('utf-8') for x in xpm]
     return wx.Bitmap(xpm_b)
 
-class PropArtDefault(object):
+class PropArtNative(object):
 
-    MARGIN_X = 2
     def __init__(self):
-        self.img_check = wx.ImageList(16, 16, True, 4)
-        self.img_expand = wx.ImageList(12, 12, True, 2)
-        self.img_check.Add(BitmapFromXPM(radio_xpm))
-        self.img_expand.Add(BitmapFromXPM(tree_xpm))
+        self.margin_x = 2
+        self.expansion_width = 12
+        self.check_width = 16
+        self.splitter_width = 8
+        self.indent_width = 20
 
     def PrepareDrawRect(self, p):
         """calculate the rect for each section"""
-        MARGIN_X = self.MARGIN_X
+        mx = self.margin_x
         rc = p.GetClientRect()
         x = rc.x
 
         p.gripper_rc = wx.Rect(*rc)
-        p.gripper_rc.x = x + MARGIN_X + p.indent*20
+        p.gripper_rc.x = x + mx + p.indent*self.indent_width
         p.gripper_rc.SetWidth(6)
         x = p.gripper_rc.right
 
         p.expander_rc = wx.Rect(*rc)
-        p.expander_rc.x = x + MARGIN_X
-        w, _ = self.img_expand.GetSize(0)
-        p.expander_rc.SetWidth(w+2)
+        p.expander_rc.x = x + mx
+        p.expander_rc.SetWidth(self.expansion_width)
         x = p.expander_rc.right
 
         p.radio_rc = wx.Rect(*rc)
-        p.radio_rc.x = x + MARGIN_X
-        w, _ = self.img_check.GetSize(0)
-        p.radio_rc.SetWidth(w+2)
+        p.radio_rc.x = x + mx
+        p.radio_rc.SetWidth(self.check_width+2)
         x = p.radio_rc.right
 
         p.label_rc = wx.Rect(*rc)
-        p.label_rc.x = x + MARGIN_X*2
+        p.label_rc.x = x + mx*2
         if not p.IsSeparator():
             p.label_rc.SetRight(p.title_width)
             x = p.label_rc.right
 
             p.splitter_rc = wx.Rect(*rc)
-            p.splitter_rc.x = x + MARGIN_X
-            p.splitter_rc.SetWidth(8)
+            p.splitter_rc.x = x + mx
+            p.splitter_rc.SetWidth(self.splitter_width)
 
             p.value_rc = wx.Rect(*rc)
             p.value_rc.SetX(p.splitter_rc.right)
@@ -60,34 +58,29 @@ class PropArtDefault(object):
     def DrawGripper(self, dc, p):
         # draw gripper
         if p.gripper_clr:
-            pen = wx.Pen(wx.BLACK, 1, wx.TRANSPARENT)
-            pen.SetColour(p.gripper_clr)
-            pen.SetStyle(wx.TRANSPARENT)
-
+            pen = wx.Pen(wx.BLACK, 1, wx.PENSTYLE_TRANSPARENT)
             dc.SetPen(pen)
 
-            brush = wx.Brush(p.gripper_clr)
-            brush.SetStyle(wx.SOLID)
-            dc.SetBrush(brush)
+            dc.SetBrush(wx.Brush(p.gripper_clr))
             rcg = p.gripper_rc
             dc.DrawRectangle(rcg.x, rcg.y+1, 3, rcg.height-1)
 
     def DrawCheck(self, dc, p):
         # draw radio button
         if p.IsShowCheck():
+            render = wx.RendererNative.Get()
             state = 0
             if not p.IsEnabled():
-                state = 1
-            elif p.IsChecked():
-                state = 2
-                if p.IsActivated():
-                    state = 3
+                state |= wx.CONTROL_DISABLED
+            if p.IsChecked():
+                state |= wx.CONTROL_CHECKED
+            if p.IsActivated():
+                state |= wx.CONTROL_FOCUSED
 
-            if self.img_check.GetImageCount() == 4:
-                (w, h) = self.img_check.GetSize(0)
-                x = p.radio_rc.x+(p.radio_rc.width-w)/2
-                y = p.radio_rc.y+(p.radio_rc.height-h)/2+1
-                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
+            w, h = self.check_width, self.check_width
+            x = p.radio_rc.x+(p.radio_rc.width-w)/2
+            y = p.radio_rc.y+(p.radio_rc.height-h)/2+1
+            render.DrawRadioBitmap(p.grid, dc, (x, y, w, h), state)
 
     def DrawSplitter(self, dc, p):
         # draw splitter
@@ -130,7 +123,7 @@ class PropArtDefault(object):
                 crtxt = p.text_clr
                 crbg = p.bg_clr
 
-            dc.SetPen(wx.Pen(crtxt, 1, wx.TRANSPARENT))
+            dc.SetPen(wx.Pen(crtxt, 1, wx.PENSTYLE_TRANSPARENT))
             dc.SetBrush(wx.Brush(crbg))
 
             dc.DrawRectangle(p.value_rc.x, p.value_rc.y,
@@ -146,6 +139,26 @@ class PropArtDefault(object):
             p.show_value_tips = p.value_rc.width < w
             dc.DestroyClippingRegion()
 
+    def DrawExpansion(self, dc, p):
+        if p.HasChildren():
+            w, h = self.expansion_width, self.expansion_width
+            x = p.expander_rc.x+(p.expander_rc.width-w)/2
+            y = p.expander_rc.y+(p.expander_rc.height-h)/2+1
+            dc.SetPen(wx.Pen(wx.BLACK))
+            dc.SetBrush(wx.BLACK_BRUSH)
+            render = wx.RendererNative.Get()
+            if p.IsExpanded():
+                render.DrawTreeItemButton(p.grid, dc, (x, y, w, h), wx.CONTROL_EXPANDED)
+            else:
+                render.DrawTreeItemButton(p.grid, dc, (x, y, w, h))
+
+    def DrawSelectedBox(self, dc, p):
+        # draw select rectangle
+        if p.activated:
+            dc.SetPen(wx.Pen(wx.BLACK, 1, wx.PENSTYLE_DOT))
+            dc.SetBrush(wx.Brush(wx.BLACK, wx.BRUSHSTYLE_TRANSPARENT))
+            dc.DrawRectangle(p.GetClientRect())
+
     def DrawItem(self, dc, p):
         """draw the property"""
         if not p.IsVisible():
@@ -158,7 +171,7 @@ class PropArtDefault(object):
 
         # draw background
         bg = p.GetGrid().GetBackgroundColour()
-        pen = wx.Pen(wx.BLACK, 1, wx.TRANSPARENT)
+        pen = wx.Pen(wx.BLACK, 1, wx.PENSTYLE_TRANSPARENT)
         dc.SetPen(pen)
         brush = wx.Brush(bg)
         dc.SetBrush(brush)
@@ -176,16 +189,53 @@ class PropArtDefault(object):
             dc.SetFont(wx.ITALIC_FONT)
         else:
             dc.SetFont(wx.NORMAL_FONT)
-        # draw select rectangle
-        if p.activated:
-            pen.SetColour(wx.BLACK)
-            pen.SetStyle(wx.DOT)
 
-            dc.SetPen(pen)
-            brush.SetStyle(wx.TRANSPARENT)
-            dc.SetBrush(brush)
-            dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
 
+        self.DrawExpansion(dc, p)
+        self.DrawGripper(dc, p)
+        self.DrawLabel(dc, p)
+
+        # separator does not have radio button, splitter bar and value sections
+        if not p.IsSeparator():
+            self.DrawCheck(dc, p)
+            self.DrawSplitter(dc, p)
+            self.DrawValue(dc, p)
+
+        self.DrawSelectedBox(dc, p)
+
+class PropArtDefault(PropArtNative):
+    def __init__(self):
+        super(PropArtDefault, self).__init__()
+
+        self.img_check = wx.ImageList(16, 16, True, 4)
+        self.img_expand = wx.ImageList(12, 12, True, 2)
+        self.img_check.Add(BitmapFromXPM(radio_xpm))
+        self.img_expand.Add(BitmapFromXPM(tree_xpm))
+
+        self.expansion_width = 12
+        self.check_width = 16
+
+    def DrawCheck(self, dc, p):
+        # draw radio button
+        if p.IsShowCheck():
+            render = wx.RendererNative.Get()
+            state = 0
+            if not p.IsEnabled():
+                state = 1
+            elif p.IsChecked():
+                state = 2
+                if p.IsActivated():
+                    state = 3
+
+            if self.img_check.GetImageCount() == 4:
+                (w, h) = self.img_check.GetSize(0)
+                x = p.radio_rc.x+(p.radio_rc.width-w)/2
+                y = p.radio_rc.y+(p.radio_rc.height-h)/2+1
+                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
+            else:
+                super(PropArtDefault, self).DrawCheck(dc, p)
+
+    def DrawExpansion(self, dc, p):
         if p.HasChildren():
             if self.img_expand.GetImageCount() == 2:
                 (w, h) = self.img_expand.GetSize(0)
@@ -195,14 +245,5 @@ class PropArtDefault(object):
                 if not p.IsExpanded():
                     idx = 1
                 self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-
-        self.DrawGripper(dc, p)
-        self.DrawLabel(dc, p)
-
-        # separator does not have radio button, splitter bar and value sections
-        if p.IsSeparator():
-            return
-
-        self.DrawCheck(dc, p)
-        self.DrawSplitter(dc, p)
-        self.DrawValue(dc, p)
+            else:
+                super(PropArtDefault, self).DrawExpansion(dc, p)
