@@ -684,9 +684,8 @@ class Property(object):
             if self.formatter and hasattr(self.formatter, 'validValues'):
                 choices = [x[1] for x in self.formatter.validValues()]
 
-            win = wx.RadioBox(self.grid, wx.ID_ANY, "",
-                              self.value_rc.GetTopLeft(), wx.DefaultSize,
-                              sorted(choices), 5, wx.RA_SPECIFY_COLS)
+            win = wx.RadioBox(self.grid, wx.ID_ANY, "", wx.DefaultPosition,
+                              wx.DefaultSize, choices, 5, wx.RA_SPECIFY_COLS)
 
             if self.formatter:
                 validator = RadioBoxValidator(self, 'value', self.formatter,

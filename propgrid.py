@@ -451,6 +451,8 @@ class PropGrid(wx.ScrolledWindow):
             if p.IsVisible():
                 h = p.GetMinSize().y
                 p.SetClientRect(wx.Rect(0, y, w, h))
+                # let art provider update drawing regions (e.g., value rect)
+                self._art.PrepareDrawRect(p)
                 y += h
 
     def GetDrawRect(self):
