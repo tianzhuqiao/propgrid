@@ -17,43 +17,53 @@ class PropArtNative(object):
     def PrepareDrawRect(self, p):
         """calculate the rect for each section"""
         mx = self.margin_x
-        rc = p.GetClientRect()
-        x = rc.x
+        irc = p.GetRect()
+        x = irc.x
 
-        p.gripper_rc = wx.Rect(*rc)
-        p.gripper_rc.x = x + mx + p.indent*self.indent_width
-        p.gripper_rc.SetWidth(6)
-        x = p.gripper_rc.right
+        rc = wx.Rect(*irc)
+        rc.x = x + mx + p.indent*self.indent_width
+        rc.SetWidth(6)
+        p.regions['gripper'] = rc
+        x = rc.right
 
-        p.expander_rc = wx.Rect(*rc)
-        p.expander_rc.x = x + mx
-        p.expander_rc.SetWidth(self.expansion_width)
-        x = p.expander_rc.right
+        # expander icon
+        rc = wx.Rect(*irc)
+        rc.x = x + mx
+        rc.SetWidth(self.expansion_width)
+        p.regions['expander'] = rc
+        x = rc.right
 
-        p.radio_rc = wx.Rect(*rc)
-        p.radio_rc.x = x + mx
-        p.radio_rc.SetWidth(self.check_width+2)
-        x = p.radio_rc.right
+        # radio/check icon
+        rc = wx.Rect(*irc)
+        rc.x = x + mx
+        rc.SetWidth(self.check_width+2)
+        p.regions['check'] = rc
+        x = rc.right
 
-        p.label_rc = wx.Rect(*rc)
-        p.label_rc.x = x + mx*2
+        # label
+        p.regions['label'] = wx.Rect(*irc)
+        p.regions['label'].x = x + mx*2
+
         if not p.IsSeparator():
-            p.label_rc.SetRight(p.title_width)
-            x = p.label_rc.right
+            p.regions['label'].SetRight(p.title_width)
+            x = p.regions['label'].right
 
-            p.splitter_rc = wx.Rect(*rc)
-            p.splitter_rc.x = x + mx
-            p.splitter_rc.SetWidth(self.splitter_width)
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(self.splitter_width)
+            p.regions['splitter'] = rc
+            x = rc.right
 
-            p.value_rc = wx.Rect(*rc)
-            p.value_rc.SetX(p.splitter_rc.right)
-            p.value_rc.SetWidth(rc.right-p.splitter_rc.right)
-            p.value_rc.Deflate(1, 1)
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(irc.right-x)
+            rc.Deflate(1, 1)
+            p.regions['value'] = rc
         else:
             # separator does not have splitter & value
-            p.label_rc.SetWidth(rc.right-p.radio_rc.right)
-            p.splitter_rc = wx.Rect(rc.right, rc.top, 0, 0)
-            p.value_rc = wx.Rect(rc.right, rc.top, 0, 0)
+            p.regions['label'].SetWidth(irc.right-p.regions['check'].right)
+            p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
+            p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
 
     def DrawGripper(self, dc, p):
         # draw gripper
@@ -62,8 +72,8 @@ class PropArtNative(object):
             dc.SetPen(pen)
 
             dc.SetBrush(wx.Brush(p.gripper_clr))
-            rcg = p.gripper_rc
-            dc.DrawRectangle(rcg.x, rcg.y+1, 3, rcg.height-1)
+            rc = p.regions['gripper']
+            dc.DrawRectangle(rc.x, rc.y+1, 3, rc.height-1)
 
     def DrawCheck(self, dc, p):
         # draw radio button
@@ -78,13 +88,14 @@ class PropArtNative(object):
                 state |= wx.CONTROL_FOCUSED
 
             w, h = self.check_width, self.check_width
-            x = p.radio_rc.x+(p.radio_rc.width-w)/2
-            y = p.radio_rc.y+(p.radio_rc.height-h)/2+1
+            rc = p.regions['check']
+            x = rc.x+(rc.width-w)/2
+            y = rc.y+(rc.height-h)/2+1
             render.DrawRadioBitmap(p.grid, dc, (x, y, w, h), state)
 
     def DrawSplitter(self, dc, p):
         # draw splitter
-        rcs = p.splitter_rc
+        rcs = p.regions['splitter']
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
         dc.DrawLine(rcs.left, rcs.top, rcs.left, rcs.bottom)
         dc.DrawLine(rcs.right-1, rcs.top, rcs.right-1, rcs.bottom)
@@ -99,12 +110,12 @@ class PropArtNative(object):
         else:
             clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
         dc.SetTextForeground(clr)
-        dc.SetClippingRegion(p.label_rc)
+        rc = p.regions['label']
+        dc.SetClippingRegion(rc)
         (w, h) = dc.GetTextExtent(p.label)
 
-        dc.DrawText(p.label, p.label_rc.GetX(), p.label_rc.GetY() +
-                    (p.label_rc.height - h)/2)
-        p.show_label_tips = w > p.label_rc.width
+        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h)/2)
+        p.show_label_tips = w > rc.width
         dc.DestroyClippingRegion()
 
     def DrawValue(self, dc, p):
@@ -126,24 +137,24 @@ class PropArtNative(object):
             dc.SetPen(wx.Pen(crtxt, 1, wx.PENSTYLE_TRANSPARENT))
             dc.SetBrush(wx.Brush(crbg))
 
-            dc.DrawRectangle(p.value_rc.x, p.value_rc.y,
-                             p.value_rc.width, p.value_rc.height)
+            rc = p.regions['value']
+            dc.DrawRectangle(rc)
 
             dc.SetTextForeground(crtxt)
 
             value = p.GetValueAsString()
             (w, h) = dc.GetTextExtent(value)
-            dc.SetClippingRegion(p.value_rc)
-            dc.DrawText(value, p.value_rc.GetX() + 5,
-                        p.value_rc.top + (p.value_rc.height - h)/2)
-            p.show_value_tips = p.value_rc.width < w
+            dc.SetClippingRegion(rc)
+            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h)/2)
+            p.show_value_tips = rc.width < w
             dc.DestroyClippingRegion()
 
     def DrawExpansion(self, dc, p):
         if p.HasChildren():
             w, h = self.expansion_width, self.expansion_width
-            x = p.expander_rc.x+(p.expander_rc.width-w)/2
-            y = p.expander_rc.y+(p.expander_rc.height-h)/2+1
+            rc = p.regions['expander']
+            x = rc.x+(rc.width-w)/2
+            y = rc.y+(rc.height-h)/2+1
             dc.SetPen(wx.Pen(wx.BLACK))
             dc.SetBrush(wx.BLACK_BRUSH)
             render = wx.RendererNative.Get()
@@ -157,7 +168,7 @@ class PropArtNative(object):
         if p.activated:
             dc.SetPen(wx.Pen(wx.BLACK, 1, wx.PENSTYLE_DOT))
             dc.SetBrush(wx.Brush(wx.BLACK, wx.BRUSHSTYLE_TRANSPARENT))
-            dc.DrawRectangle(p.GetClientRect())
+            dc.DrawRectangle(p.GetRect())
 
     def DrawItem(self, dc, p):
         """draw the property"""
@@ -166,7 +177,7 @@ class PropArtNative(object):
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
 
-        rc = p.GetClientRect()
+        rc = p.GetRect()
         self.PrepareDrawRect(p)
 
         # draw background
@@ -229,8 +240,9 @@ class PropArtDefault(PropArtNative):
 
             if self.img_check.GetImageCount() == 4:
                 (w, h) = self.img_check.GetSize(0)
-                x = p.radio_rc.x+(p.radio_rc.width-w)/2
-                y = p.radio_rc.y+(p.radio_rc.height-h)/2+1
+                rc = p.regions['check']
+                x = rc.x+(rc.width-w)/2
+                y = rc.y+(rc.height-h)/2+1
                 self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
             else:
                 super(PropArtDefault, self).DrawCheck(dc, p)
@@ -239,8 +251,9 @@ class PropArtDefault(PropArtNative):
         if p.HasChildren():
             if self.img_expand.GetImageCount() == 2:
                 (w, h) = self.img_expand.GetSize(0)
-                x = p.expander_rc.x+(p.expander_rc.width-w)/2
-                y = p.expander_rc.y+(p.expander_rc.height-h)/2+1
+                rc = p.regions['expander']
+                x = rc.x+(rc.width-w)/2
+                y = rc.y+(rc.height-h)/2+1
                 idx = 0
                 if not p.IsExpanded():
                     idx = 1

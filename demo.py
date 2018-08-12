@@ -128,10 +128,13 @@ class MainFrame(wx.Frame):
         p.SetControlStyle('radiobox')
         p.SetIndent(1)
 
-        # formatter
-        p = g.InsertProperty('integer', 'Integer', 10)
-        p.SetFormatter(fmt.IntFormatter())
+        p = g.InsertProperty('date', 'date', wx.DateTime.Today())
         p.SetIndent(1)
+        p.SetFormatter(fmt.DateFormatter())
+
+        p = g.InsertProperty('time', 'time', wx.DateTime.Now())
+        p.SetIndent(1)
+        p.SetFormatter(fmt.TimeFormatter())
 
         # color
         self.clr_map = np.array([[170., 110.,  40., 255.],

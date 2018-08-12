@@ -265,11 +265,11 @@ class PropGrid(wx.ScrolledWindow):
         p = self.GetProperty(prop)
         if not p:
             return
-        rc_prop = p.GetClientRect()
+        rc_prop = p.GetRect()
         # translate to the scrolled position
         rc_prop.x, rc_prop.y = self.CalcScrolledPosition(rc_prop.x, rc_prop.y)
         _, y = self.GetViewStart()
-        rc = self.GetClientRect()
+        rc = self.GetRect()
         if rc.top < rc_prop.top and rc.bottom > rc_prop.bottom:
             # if the prop is visible, simply return
             return
@@ -424,7 +424,7 @@ class PropGrid(wx.ScrolledWindow):
             prop = self._props[i]
             if  not prop.IsVisible():
                 continue
-            if prop.GetClientRect().Contains(pt):
+            if prop.GetRect().Contains(pt):
                 return i
         return -1
 
@@ -450,7 +450,7 @@ class PropGrid(wx.ScrolledWindow):
         for p in self._props:
             if p.IsVisible():
                 h = p.GetMinSize().y
-                p.SetClientRect(wx.Rect(0, y, w, h))
+                p.SetRect(wx.Rect(0, y, w, h))
                 # let art provider update drawing regions (e.g., value rect)
                 self._art.PrepareDrawRect(p)
                 y += h
@@ -501,7 +501,7 @@ class PropGrid(wx.ScrolledWindow):
         prop = evt.GetProperty()
         if prop is None:
             return
-        rc = prop.GetClientRect()
+        rc = prop.GetRect()
         rc.x, rc.y = self.CalcScrolledPosition(rc.x, rc.y)
         self.RefreshRect(rc, True)
 
@@ -634,7 +634,7 @@ class PropGrid(wx.ScrolledWindow):
         for p in self._props:
             if not p.IsVisible():
                 continue
-            rc_prop = p.GetClientRect()
+            rc_prop = p.GetRect()
             if rc.Intersects(rc_prop):
                 p.SetTitleWidth(self.title_width)
                 self._art.DrawItem(dc, p)
@@ -663,19 +663,19 @@ class PropGrid(wx.ScrolledWindow):
             self.prop_under_mouse = prop
             self.CaptureMouse()
             self.resize_mode = self.RESIZE_NONE
-            if ht == PROP_HIT_SPLITTER:
+            if ht == 'splitter':
                 # drag the splitter
                 self.resize_mode = self.RESIZE_SEP
-            elif ht == PROP_HIT_EDGE_BOTTOM:
+            elif ht == 'bottom_edge':
                 # drag the bottom edge
                 self.resize_mode = self.RESIZE_BOT
-            elif ht == PROP_HIT_EDGE_TOP:
+            elif ht == 'top_edge':
                 # drag the bottom edge of the property above
                 if index > 0:
                     index = index-1
                     self.prop_under_mouse = self.GetProperty(index)
                     self.resize_mode = self.RESIZE_BOT
-            elif ht == PROP_HIT_TITLE:
+            elif ht == 'label':
                 # start drag & drop
                 PropGrid.drag_start = self.ClientToScreen(pt)
                 PropGrid.drag_prop = prop
@@ -787,21 +787,21 @@ class PropGrid(wx.ScrolledWindow):
                     ht = prop.OnMouseMove(pt)
 
                     # change the cursor icon
-                    if ht == PROP_HIT_SPLITTER:
+                    if ht == 'splitter':
                         mode = self.CURSOR_RESIZE_HORZ
-                    elif ht == PROP_HIT_EDGE_BOTTOM:
+                    elif ht == 'bottom_edge':
                         mode = self.CURSOR_RESIZE_VERT
-                    elif ht == PROP_HIT_EDGE_TOP:
+                    elif ht == 'top_edge':
                         if index > 0:
                             mode = self.CURSOR_RESIZE_VERT
                         else:
                             mode = self.CURSOR_STD
                     #if prop.GetShowLabelTips() and ht == Property.PROP_HIT_TITLE:
-                    if ht == PROP_HIT_TITLE:
+                    if ht == 'label':
                         tooltip = prop.GetLabelTip()
-                    elif prop.GetShowValueTips() and ht == PROP_HIT_VALUE:
+                    elif prop.GetShowValueTips() and ht == 'value':
                         tooltip = prop.GetValueTip()
-                    elif ht == PROP_HIT_EXPAND:
+                    elif ht == 'expander':
                         tooltip = prop.GetLabelTip()
                 # set the tooltip
                 if self.GetToolTipText() != tooltip:

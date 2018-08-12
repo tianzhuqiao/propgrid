@@ -54,15 +54,6 @@ PROP_CTRL_DATE = 11
 PROP_CTRL_TIME = 12
 PROP_CTRL_NUM = 13
 
-PROP_HIT_NONE = 0
-PROP_HIT_EXPAND = 1
-PROP_HIT_CHECK = 2
-PROP_HIT_TITLE = 3
-PROP_HIT_SPLITTER = 4
-PROP_HIT_VALUE = 5
-PROP_HIT_EDGE_BOTTOM = 6
-PROP_HIT_EDGE_TOP = 7
-
 class Property(object):
 
     def __init__(self, grid, name, label, value):
@@ -90,13 +81,10 @@ class Property(object):
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
         self.min_size = wx.Size(200, 25)
-        self.client_rc = wx.Rect(0, 0, 0, 0)
-        self.gripper_rc = wx.Rect(0, 0, 0, 0)
-        self.expander_rc = wx.Rect(0, 0, 0, 0)
-        self.radio_rc = wx.Rect(0, 0, 0, 0)
-        self.splitter_rc = wx.Rect(0, 0, 0, 0)
-        self.label_rc = wx.Rect(0, 0, 0, 0)
-        self.value_rc = wx.Rect(0, 0, 0, 0)
+        self.rect = wx.Rect(0, 0, 0, 0)
+        # non-overlapping regions
+        self.regions = {'value':wx.Rect(), 'label':wx.Rect(),
+                        'splitter':wx.Rect(), 'expander':wx.Rect()}
         self.show_label_tips = False
         self.show_value_tips = False
         self.separator = False
@@ -331,7 +319,7 @@ class Property(object):
         """get the valuetip"""
         if self.value_tip:
             return self.value_tip
-        return self.value
+        return self.GetValueAsString()
 
     def SetFormatter(self, formatter):
         if not formatter or not hasattr(formatter, 'validate') or\
@@ -483,17 +471,17 @@ class Property(object):
         """return the width"""
         return self.title_width
 
-    def SetClientRect(self, rc):
-        """set the client rect"""
-        if self.client_rc != rc:
-            self.client_rc = wx.Rect(*rc)
+    def SetRect(self, rc):
+        """set the prop rect"""
+        if self.rect != rc:
+            self.rect = wx.Rect(*rc)
             # redraw the item
             self.Refresh()
             wx.CallAfter(self.LayoutControl)
 
-    def GetClientRect(self):
-        """return the client rect"""
-        return wx.Rect(*self.client_rc)
+    def GetRect(self):
+        """return the prop rect"""
+        return wx.Rect(*self.rect)
 
     def SetMinSize(self, size, silent=False):
         """set the min size"""
@@ -513,7 +501,7 @@ class Property(object):
 
     def GetSize(self):
         """return the current size"""
-        return self.client_rc.GetSize()
+        return self.rect.GetSize()
 
     def GetShowLabelTips(self):
         """return whether label tooltip is allowed"""
@@ -526,36 +514,29 @@ class Property(object):
     def HitTest(self, pt):
         """find the mouse position relative to the property"""
         # bottom edge
-        rc = wx.Rect(*self.client_rc)
+        rc = wx.Rect(*self.rect)
         rc.SetTop(rc.bottom-2)
         if rc.Contains(pt):
-            return PROP_HIT_EDGE_BOTTOM
+            return 'bottom_edge'
         # top edge
-        rc = wx.Rect(*self.client_rc)
+        rc = wx.Rect(*self.rect)
         rc.SetBottom(rc.top+2)
         if rc.Contains(pt):
-            return PROP_HIT_EDGE_TOP
+            return 'top_edge'
 
-        if self.expander_rc.Contains(pt):
-            return PROP_HIT_EXPAND
-        elif self.radio_rc.Contains(pt):
-            return PROP_HIT_CHECK
-        elif self.label_rc.Contains(pt):
-            return PROP_HIT_TITLE
-        elif self.splitter_rc.Contains(pt):
-            return PROP_HIT_SPLITTER
-        elif self.value_rc.Contains(pt):
-            return PROP_HIT_VALUE
+        for k, v in six.iteritems(self.regions):
+            if v.Contains(pt):
+                return k
 
-        return PROP_HIT_NONE
+        return None
 
     def OnMouseDown(self, pt):
         ht = self.HitTest(pt)
         # click on the expand buttons? expand it?
-        if self.HasChildren() and ht == PROP_HIT_EXPAND:
+        if self.HasChildren() and ht == 'expander':
             self.SetExpand(not self.expanded)
 
-        if ht == PROP_HIT_VALUE:
+        if ht == 'value':
             if not self.IsReadonly() and self.IsActivated():
                 self.CreateControl()
         else:
@@ -568,7 +549,7 @@ class Property(object):
         ht = self.HitTest(pt)
         if self.IsEnabled():
             # click on the check icon? change the state
-            if self.IsShowCheck() and ht == PROP_HIT_CHECK:
+            if self.IsShowCheck() and ht == 'check':
                 checked = self.IsChecked()
                 self.SetChecked(not checked)
         return ht
@@ -577,14 +558,14 @@ class Property(object):
         ht = self.HitTest(pt)
 
         if self.IsEnabled():
-            if ht == PROP_HIT_VALUE:
+            if ht == 'value':
                 if not self.IsReadonly():
                     self.CreateControl()
             else:
                 self.UpdatePropValue()
                 self.DestroyControl()
 
-            if ht == PROP_HIT_EXPAND:
+            if ht == 'expander':
                 self.SetExpand(not self.expanded)
 
             self.SendPropEvent(wxEVT_PROP_DOUBLE_CLICK)
@@ -596,7 +577,7 @@ class Property(object):
 
         if self.IsEnabled():
             # destroy the control when the mouse moves out
-            if ht == PROP_HIT_NONE:
+            if ht is None:
                 self.UpdatePropValue()
                 self.DestroyControl()
             self.SendPropEvent(wxEVT_PROP_RIGHT_CLICK)
@@ -762,7 +743,7 @@ class Property(object):
         if self.window is None:
             return
         (x, y) = self.grid.GetViewStart()
-        rc = wx.Rect(*self.value_rc)
+        rc = wx.Rect(*self.regions['value'])
         rc.Offset(wx.Point(-x*5, -y*5))
         self.window.SetSize(rc.GetSize())
         self.window.Move(rc.GetTopLeft())
