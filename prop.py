@@ -6,6 +6,7 @@ import wx
 import wx.adv
 from .validators import *
 from .formatters import *
+from .enumtype import EnumType
 
 wxEVT_PROP_SELECTED = wx.NewEventType()
 wxEVT_PROP_CHANGING = wx.NewEventType()
@@ -39,23 +40,10 @@ EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 EVT_PROP_CLICK_CHECK = wx.PyEventBinder(wxEVT_PROP_CLICK_CHECK, 1)
 
-PROP_CTRL_DEFAULT = 0
-PROP_CTRL_NONE = 1
-PROP_CTRL_EDIT = 2
-PROP_CTRL_CHOICE = 3
-PROP_CTRL_FILE_SEL = 4
-PROP_CTRL_FOLDER_SEL = 5
-PROP_CTRL_SLIDER = 6
-PROP_CTRL_SPIN = 7
-PROP_CTRL_CHECK = 8
-PROP_CTRL_RADIO = 9
-PROP_CTRL_COLOR = 10
-PROP_CTRL_DATE = 11
-PROP_CTRL_TIME = 12
-PROP_CTRL_NUM = 13
-
 class Property(object):
-
+    controls = EnumType('default', 'none', 'editbox', 'choice', 'file', 'folder',
+                        'slider', 'spin', 'checkbox', 'radiobox', 'color', 'date',
+                        'time')
     def __init__(self, grid, name, label, value):
         self.grid = grid
         self.name = name
@@ -74,7 +62,7 @@ class Property(object):
         self.expanded = True
         self.visible = True
         self.readonly = False
-        self.ctrl_type = PROP_CTRL_DEFAULT
+        self.ctrl_type = self.controls.default
         self.window = None
         self.parent = -1
         self.SetGripperColor()
@@ -152,25 +140,15 @@ class Property(object):
 
     def SetControlStyle(self, style):
         """set the control type
-        style: none | editbox | combobox | file_sel_button |
-               folder_sel_button | slider | spin | checkbox | radiobox |
-               color
+        style: default | none | editbox | choice | file | folder | slider |
+               spin | checkbox | radiobox | color | date | time
         """
         self.UpdatePropValue()
         self.DestroyControl()
-        str_style = {'default': PROP_CTRL_DEFAULT, 'none': PROP_CTRL_NONE,
-                     'editbox': PROP_CTRL_EDIT, 'choice':PROP_CTRL_CHOICE,
-                     'file_dialog':PROP_CTRL_FILE_SEL,
-                     'dir_dialog': PROP_CTRL_FOLDER_SEL,
-                     'slider': PROP_CTRL_SLIDER, 'spin': PROP_CTRL_SPIN,
-                     'checkbox': PROP_CTRL_CHECK, 'radiobox': PROP_CTRL_RADIO,
-                     'color': PROP_CTRL_COLOR, 'date': PROP_CTRL_DATE,
-                     'time': PROP_CTRL_TIME}
-        if isinstance(style, six.string_types):
-            style = str_style.get(style, None)
-        if style < PROP_CTRL_NONE or style >= PROP_CTRL_NUM:
+        if style not in self.controls:
+            print('Unsupported control style!')
             return False
-        self.ctrl_type = style
+        self.ctrl_type = self.controls[style]
         return True
 
     def GetControlStyle(self):
@@ -598,25 +576,25 @@ class Property(object):
         if self.window != None or self.IsSeparator():
             return
         style = self.ctrl_type
-        if style == PROP_CTRL_DEFAULT:
-            style = PROP_CTRL_EDIT
+        if style == self.controls.default:
+            style = self.controls.editbox
             if isinstance(self.formatter, EnumFormatter):
-                style = PROP_CTRL_CHOICE
+                style = self.controls.choice
             elif isinstance(self.formatter, BoolFormatter):
-                style = PROP_CTRL_CHECK
+                style = self.controls.checkbox
             elif isinstance(self.formatter, PathFormatter):
                 if self.formatter.types == 'file':
-                    style = PROP_CTRL_FILE_SEL
+                    style = self.controls.file
                 elif self.formatter.types == 'folder':
-                    style = PROP_CTRL_FOLDER_SEL
+                    style = self.controls.folder
             elif isinstance(self.formatter, ColorFormatter):
-                style = PROP_CTRL_COLOR
+                style = self.controls.color
             elif isinstance(self.formatter, DateFormatter):
-                style = PROP_CTRL_DATE
+                style = self.controls.date
                 if isinstance(self.formatter, TimeFormatter):
-                    style = PROP_CTRL_TIME
+                    style = self.controls.time
         win = None
-        if style == PROP_CTRL_EDIT:
+        if style == self.controls.editbox:
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
                               style=wx.TE_PROCESS_ENTER)
             if self.formatter:
@@ -625,22 +603,22 @@ class Property(object):
                 win.SetValidator(validator)
             win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
 
-        elif style == PROP_CTRL_CHOICE:
+        elif style == self.controls.choice:
             win = wx.Choice(self.grid, wx.ID_ANY)
             if self.formatter:
                 validator = SelectorValidator(self, 'value', self.formatter,
                                               True)
                 win.SetValidator(validator)
 
-        elif style == PROP_CTRL_FILE_SEL:
+        elif style == self.controls.file:
             win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
             win.Bind(wx.EVT_BUTTON, self.OnSelectFile)
 
-        elif style == PROP_CTRL_FOLDER_SEL:
+        elif style == self.controls.folder:
             win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
             win.Bind(wx.EVT_BUTTON, self.OnSelectFolder)
 
-        elif style == PROP_CTRL_SLIDER:
+        elif style == self.controls.slider:
             win = wx.Slider(self.grid, wx.ID_ANY, value=int(self.value),
                             style=wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
             if self.formatter:
@@ -648,7 +626,7 @@ class Property(object):
                                                 True)
                 win.SetValidator(validator)
 
-        elif style == PROP_CTRL_SPIN:
+        elif style == self.controls.spin:
             win = wx.SpinCtrl(self.grid, wx.ID_ANY, str(self.value),
                               style=wx.SP_ARROW_KEYS)
             if self.formatter:
@@ -656,11 +634,11 @@ class Property(object):
                                                 True)
                 win.SetValidator(validator)
 
-        elif style == PROP_CTRL_CHECK:
+        elif style == self.controls.checkbox:
             win = wx.CheckBox(self.grid, wx.ID_ANY)
             win.SetValue(int(self.value) != 0)
 
-        elif style == PROP_CTRL_RADIO:
+        elif style == self.controls.radiobox:
             choices = []
             if self.formatter and hasattr(self.formatter, 'validValues'):
                 choices = [x[1] for x in self.formatter.validValues()]
@@ -673,7 +651,7 @@ class Property(object):
                                               True)
                 win.SetValidator(validator)
 
-        elif style == PROP_CTRL_COLOR:
+        elif style == self.controls.color:
             win = wx.ColourPickerCtrl(self.grid, wx.ID_ANY, wx.BLACK,
                                       style=wx.CLRP_DEFAULT_STYLE |
                                       wx.CLRP_SHOW_LABEL)
@@ -682,14 +660,14 @@ class Property(object):
             except ValueError:
                 pass
 
-        elif style == PROP_CTRL_DATE:
+        elif style == self.controls.date:
             win = wx.adv.DatePickerCtrl(self.grid, wx.ID_ANY)
             try:
                 win.SetValue(self.value)
             except ValueError:
                 pass
 
-        elif style == PROP_CTRL_TIME:
+        elif style == self.controls.time:
             win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
             try:
                 win.SetValue(self.value)
@@ -774,7 +752,6 @@ class Property(object):
             value = self.window.GetValue()
 
         elif isinstance(self.window, wx.Button):
-            # [PROP_CTRL_FILE_SEL, PROP_CTRL_FOLDER_SEL]
             value = self.window.GetLabel()
 
         elif isinstance(self.window, wx.RadioBox) or\

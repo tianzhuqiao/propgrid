@@ -552,7 +552,9 @@ class PropGrid(wx.ScrolledWindow):
         elif eid == self.ID_PROP_GRID_PROP:
             dlg = PropSettings(self, prop)
             if dlg.ShowModal() == wx.ID_OK:
-                prop.Refresh()
+                # Update the prop only may not be enough, for example, if its
+                # indent is changed, it may affect the previous prop.
+                self.UpdateGrid()
         elif eid == self.ID_PROP_GRID_INDENT_INS:
             prop.SetIndent(prop.GetIndent()+1)
         elif eid == self.ID_PROP_GRID_INDENT_DES:
@@ -881,24 +883,24 @@ class PropSettings(wx.Dialog):
         self.propgrid = PropGrid(self)
         self.prop = prop
         if prop.IsSeparator():
-            self.items = (('name', 'Name', '', PROP_CTRL_EDIT),
-                          ('label', 'Label', '', PROP_CTRL_EDIT),
-                          ('indent', 'Indent level', '', PROP_CTRL_SPIN),
-                          ('italic', 'Italic', '', PROP_CTRL_CHECK))
+            self.items = (('name', 'Name', '', 'editbox'),
+                          ('label', 'Label', '', 'editbox'),
+                          ('indent', 'Indent level', '', 'spin'),
+                          ('italic', 'Italic', '', 'checkbox'))
         else:
-            self.items = (('name', 'Name', '', PROP_CTRL_EDIT),
-                          ('label', 'Label', '', PROP_CTRL_EDIT),
-                          ('indent', 'Indent level', '', PROP_CTRL_SPIN),
-                          ('show_check', 'Show check icon', '', PROP_CTRL_CHECK),
-                          ('enable', 'Enable', '', PROP_CTRL_CHECK),
-                          ('italic', 'Italic', '', PROP_CTRL_CHECK),
-                          ('readonly', 'Read only', '', PROP_CTRL_CHECK),
-                          ('text_clr', 'Normal text color', '', PROP_CTRL_COLOR),
-                          ('text_clr_sel', 'Selected text color', '', PROP_CTRL_COLOR),
-                          ('text_clr_disabled', 'Disable text color', '', PROP_CTRL_COLOR),
-                          ('bg_clr', 'Normal background color', '', PROP_CTRL_COLOR),
-                          ('bg_clr_sel', 'Selected background color', '', PROP_CTRL_COLOR),
-                          ('bg_clr_disabled', 'Disable background color', '', PROP_CTRL_COLOR))
+            self.items = (('name', 'Name', '', 'editbox'),
+                          ('label', 'Label', '', 'editbox'),
+                          ('indent', 'Indent level', '', 'spin'),
+                          ('show_check', 'Show check icon', '', 'checkbox'),
+                          ('enable', 'Enable', '', 'checkbox'),
+                          ('italic', 'Italic', '', 'checkbox'),
+                          ('readonly', 'Read only', '', 'checkbox'),
+                          ('text_clr', 'Normal text color', '', 'color'),
+                          ('text_clr_sel', 'Selected text color', '', 'color'),
+                          ('text_clr_disabled', 'Disable text color', '', 'color'),
+                          ('bg_clr', 'Normal background color', '', 'color'),
+                          ('bg_clr_sel', 'Selected background color', '', 'color'),
+                          ('bg_clr_disabled', 'Disable background color', '', 'color'))
 
         for (name, label, tip, ctrl) in self.items:
             pp = self.propgrid.InsertProperty(name, label, '')
@@ -909,18 +911,18 @@ class PropSettings(wx.Dialog):
             pp.SetLabelTip(label)
             pp.SetValueTip(tip)
             pp.SetControlStyle(ctrl)
-            if ctrl == PROP_CTRL_CHECK:
+            if ctrl == 'check':
                 pp.SetValue(v)
                 pp.SetFormatter(BoolFormatter())
-            elif ctrl == PROP_CTRL_COLOR:
+            elif ctrl == 'color':
                 pp.SetValue(v)
                 pp.SetBgColor(v, v, v)
                 t = wx.Colour(v)
                 t.SetRGB(t.GetRGB()^0xffffff)
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
-            elif ctrl in [PROP_CTRL_SPIN, PROP_CTRL_SLIDER]:
-                pp.SetFormatter(IntFormatter(-2**31-1, 2**31))
+            elif ctrl in ['spin', 'slider']:
+                pp.SetFormatter(IntFormatter(0, 100))
                 pp.SetValue(v)
             else:
                 pp.SetValue(v)
@@ -942,10 +944,21 @@ class PropSettings(wx.Dialog):
         # Connect Events
         self.Bind(wx.EVT_BUTTON, self.OnBtnOk, id=wx.ID_OK)
         self.Bind(EVT_PROP_RIGHT_CLICK, self.OnPropEventsHandler)
+        self.Bind(EVT_PROP_CHANGED, self.OnPropChanged)
 
     def OnPropEventsHandler(self, evt):
         # disable context menu
         evt.Veto()
+
+    def OnPropChanged(self, evt):
+        p = evt.GetProperty()
+        if '_clr' in p.GetName():
+            t = wx.Colour(p.GetValue())
+            c = t.GetAsString(wx.C2S_HTML_SYNTAX)
+            p.SetBgColor(c, c, c)
+            t.SetRGB(t.GetRGB()^0xFFFFFF)
+            t = t.GetAsString(wx.C2S_HTML_SYNTAX)
+            p.SetTextColor(t, t, t)
 
     def OnBtnOk(self, event):
         if self.propgrid.prop_selected:
@@ -954,7 +967,7 @@ class PropSettings(wx.Dialog):
 
         for (name, _, _, ctrl) in self.items:
             v = self.propgrid.GetProperty(name)
-            if ctrl == PROP_CTRL_CHECK:
+            if ctrl == 'check':
                 setattr(self.prop, name, bool(int(v.GetValue())))
             else:
                 setattr(self.prop, name, type(getattr(self.prop, name))(v.GetValue()))
