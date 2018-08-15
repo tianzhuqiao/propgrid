@@ -51,7 +51,11 @@ class MainFrame(wx.Frame):
 
         p = g.InsertProperty('italic', 'italic', 'hello world!')
         p.SetIndent(1)
-        p.Italic()
+        p.SetValueFont(wx.Font(wx.NORMAL_FONT).Italic())
+
+        p = g.InsertProperty('bold', 'bold', 'hello world!')
+        p.SetIndent(1)
+        p.SetValueFont(wx.Font(wx.NORMAL_FONT).Bold())
 
         p = g.InsertProperty('with check', 'with check', 'hello world!')
         p.SetIndent(1)
@@ -136,6 +140,10 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
         p.SetFormatter(fmt.TimeFormatter())
 
+        p = g.InsertProperty('font', 'font', wx.NORMAL_FONT)
+        p.SetIndent(1)
+        p.SetFormatter(fmt.FontFormatter())
+
         # color
         self.clr_map = np.array([[170., 110.,  40., 255.],
                                [  0.,  0., 128., 255.],
@@ -212,7 +220,8 @@ class MainFrame(wx.Frame):
                 t.SetRGB(t.GetRGB()^0xFFFFFF)
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 p.SetTextColor(t, t, t)
-
+        if 'font' in p.GetName():
+            p.SetValueFont(p.GetValue())
     def OnTimer(self, event):
         p = self.propgrid.GetProperty('datetime')
         if p:

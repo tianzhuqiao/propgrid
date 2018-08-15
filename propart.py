@@ -13,6 +13,24 @@ class PropArtNative(object):
         self.check_width = 16
         self.splitter_width = 8
         self.indent_width = 20
+        self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        self._font_value = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+
+    def SetValueFont(self, font):
+        """set label font"""
+        self._font_label = font
+
+    def GetLabelFont(self):
+        """get label font"""
+        return self._font_label
+
+    def SetValueFont(self, font):
+        """set value font"""
+        self._font_value = font
+
+    def GetValueFont(self):
+        """get value font"""
+        return self._font_value
 
     def PrepareDrawRect(self, p):
         """calculate the rect for each section"""
@@ -105,6 +123,12 @@ class PropArtNative(object):
 
     def DrawLabel(self, dc, p):
         # draw label
+        if p.font_label is None:
+            font = self._font_label
+        else:
+            font = wx.Font(p.font_label)
+        dc.SetFont(font)
+
         if not p.IsEnabled() or p.IsReadonly():
             clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
         else:
@@ -120,6 +144,12 @@ class PropArtNative(object):
 
     def DrawValue(self, dc, p):
         # draw value
+        if p.font_value is None:
+            font = self._font_value
+        else:
+            font = wx.Font(p.font_value)
+        dc.SetFont(font)
+
         p.show_value_tips = False
         if p.window is None:
             crbg = p.bg_clr
@@ -196,10 +226,6 @@ class PropArtNative(object):
         dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
         dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
 
-        if p.IsItalic():
-            dc.SetFont(wx.ITALIC_FONT)
-        else:
-            dc.SetFont(wx.NORMAL_FONT)
 
 
         self.DrawExpansion(dc, p)

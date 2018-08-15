@@ -43,7 +43,7 @@ EVT_PROP_CLICK_CHECK = wx.PyEventBinder(wxEVT_PROP_CLICK_CHECK, 1)
 class Property(object):
     controls = EnumType('default', 'none', 'editbox', 'choice', 'file', 'folder',
                         'slider', 'spin', 'checkbox', 'radiobox', 'color', 'date',
-                        'time')
+                        'time', 'font')
     def __init__(self, grid, name, label, value):
         self.grid = grid
         self.name = name
@@ -57,7 +57,8 @@ class Property(object):
         self.checked = False
         self.activated = False
         self.enable = True
-        self.italic = False
+        self.font_label = None
+        self.font_value = None
         self.has_children = False
         self.expanded = True
         self.visible = True
@@ -95,7 +96,10 @@ class Property(object):
         p.checked = self.checked
         p.activated = self.activated
         p.enable = self.enable
-        p.italic = self.italic
+        if p.font_label:
+            self.font_label = wx.Font(p.font_label)
+        if p.font_value:
+            self.font_value = wx.Font(p.font_value)
         p.has_children = self.has_children
         p.expanded = self.expanded
         p.visible = self.visible
@@ -201,17 +205,15 @@ class Property(object):
             return self.label_tip
         return self.GetName()
 
-    def Italic(self, italic=True, silent=False):
-        """turn on/of the italic text"""
-        if self.italic == italic:
-            return
-        self.italic = italic
+    def SetLabelFont(self, font, silent=False):
+        """set label font"""
+        self.font_label = font
         if not silent:
             self.Refresh()
 
-    def IsItalic(self):
-        "return true if the italic is used for drawing"
-        return self.italic
+    def GetLabelFont(self):
+        """get label font"""
+        return self.font_label
 
     def SetVisible(self, visible=True, silent=False):
         """
@@ -298,6 +300,16 @@ class Property(object):
         if self.value_tip:
             return self.value_tip
         return self.GetValueAsString()
+
+    def SetValueFont(self, font, silent=False):
+        """set value font"""
+        self.font_value = font
+        if not silent:
+            self.Refresh()
+
+    def GetValueFont(self):
+        """get value font"""
+        return self.font_value
 
     def SetFormatter(self, formatter):
         if not formatter or not hasattr(formatter, 'validate') or\
@@ -589,6 +601,8 @@ class Property(object):
                     style = self.controls.folder
             elif isinstance(self.formatter, ColorFormatter):
                 style = self.controls.color
+            elif isinstance(self.formatter, FontFormatter):
+                style = self.controls.font
             elif isinstance(self.formatter, DateFormatter):
                 style = self.controls.date
                 if isinstance(self.formatter, TimeFormatter):
@@ -657,6 +671,13 @@ class Property(object):
                                       wx.CLRP_SHOW_LABEL)
             try:
                 win.SetColour(self.value)
+            except ValueError:
+                pass
+        elif style == self.controls.font:
+            win = wx.FontPickerCtrl(self.grid, wx.ID_ANY)
+            try:
+                if self.value:
+                    win.SetSelectedFont(self.value)
             except ValueError:
                 pass
 
@@ -773,6 +794,10 @@ class Property(object):
             clr = self.window.GetColour()
             value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
 
+        elif isinstance(self.window, wx.FontPickerCtrl):
+            font = self.window.GetSelectedFont()
+            value = font.GetNativeFontInfoDesc()
+
         elif isinstance(self.window, wx.adv.DatePickerCtrl) or\
              isinstance(self.window, wx.adv.TimePickerCtrl):
             value = self.window.GetValue()
@@ -784,7 +809,7 @@ class Property(object):
                     value = self.formatter.coerce(str(value))
                 else:
                     return False
-            else:
+            elif self.value is not None:
                 value = type(self.value)(value)
             self.SetValue(value, silent=True)
         except ValueError:

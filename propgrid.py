@@ -886,14 +886,17 @@ class PropSettings(wx.Dialog):
             self.items = (('name', 'Name', '', 'editbox'),
                           ('label', 'Label', '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
-                          ('italic', 'Italic', '', 'checkbox'))
+                          ('font_label', 'Label font', '', 'font'),
+                          ('font_value', 'Value font', '', 'font')
+                          )
         else:
             self.items = (('name', 'Name', '', 'editbox'),
                           ('label', 'Label', '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
                           ('show_check', 'Show check icon', '', 'checkbox'),
                           ('enable', 'Enable', '', 'checkbox'),
-                          ('italic', 'Italic', '', 'checkbox'),
+                          ('font_label', 'Label font', '', 'font'),
+                          ('font_value', 'Value font', '', 'font'),
                           ('readonly', 'Read only', '', 'checkbox'),
                           ('text_clr', 'Normal text color', '', 'color'),
                           ('text_clr_sel', 'Selected text color', '', 'color'),
@@ -921,6 +924,10 @@ class PropSettings(wx.Dialog):
                 t.SetRGB(t.GetRGB()^0xffffff)
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
+            elif ctrl == 'font':
+                pp.SetValueFont(v)
+                pp.SetValue(v)
+                pp.SetFormatter(FontFormatter())
             elif ctrl in ['spin', 'slider']:
                 pp.SetFormatter(IntFormatter(0, 100))
                 pp.SetValue(v)
@@ -969,6 +976,8 @@ class PropSettings(wx.Dialog):
             v = self.propgrid.GetProperty(name)
             if ctrl == 'check':
                 setattr(self.prop, name, bool(int(v.GetValue())))
+            if ctrl == 'font':
+                setattr(self.prop, name, v.GetValue())
             else:
                 setattr(self.prop, name, type(getattr(self.prop, name))(v.GetValue()))
         event.Skip()

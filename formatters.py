@@ -569,6 +569,23 @@ class ColorFormatter(Formatter):
         except:
             return ""
 
+class FontFormatter(Formatter):
+    # Storage formate: wx.Font
+    def validate(self, str_value):
+        font = wx.Font(str_value)
+        return font.IsOk()
+
+    def format(self, value):
+        if isinstance(value, six.string_types):
+            return value
+        elif isinstance(value, wx.Font):
+            return value.GetNativeFontInfoDesc()
+        return ""
+
+    def coerce(self, str_value):
+        font = wx.Font(str_value)
+        return font
+
 if __name__ == '__main__':
 
     from .enumtype import EnumType
