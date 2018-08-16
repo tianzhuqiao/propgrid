@@ -559,7 +559,9 @@ class ColorFormatter(Formatter):
     def format(self, value):
         if isinstance(value, six.string_types):
             return value
-        return value.GetAsString(wx.C2S_HTML_SYNTAX)
+        elif isinstance(value, wx.Colour):
+            return value.GetAsString(wx.C2S_HTML_SYNTAX)
+        return ""
 
     def coerce(self, str_value):
         try:

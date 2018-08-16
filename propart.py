@@ -9,14 +9,29 @@ class PropArtNative(object):
 
     def __init__(self):
         self.margin_x = 2
+        self.title_width = 150
         self.expansion_width = 12
         self.check_width = 16
         self.splitter_width = 8
         self.indent_width = 20
         self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         self._font_value = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
+        self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
+        self.text_clr_sel = wx.WHITE
+        self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+        self.bg_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
+        self.bg_clr_sel = wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)
+        self.bg_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
 
-    def SetValueFont(self, font):
+    def SetTitleWidth(self, width):
+        """set the title width"""
+        self.title_width = width
+
+    def GetTitleWidth(self):
+        """return the width"""
+        return self.title_width
+
+    def SetLabelFont(self, font):
         """set label font"""
         self._font_label = font
 
@@ -31,6 +46,49 @@ class PropArtNative(object):
     def GetValueFont(self):
         """get value font"""
         return self._font_value
+
+    def SetTextColor(self, clr=None, clr_sel=None, clr_disabled=None):
+        """
+        set the text colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        self.text_clr = clr
+        if not self.text_clr:
+            self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
+        self.text_clr_sel = clr_sel
+        if not self.text_clr_sel:
+            self.text_clr_sel = wx.WHITE
+        self.text_clr_disabled = clr_disabled
+        if not self.text_clr_disabled:
+            self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+
+    def GetTextColor(self):
+        """get the text colors"""
+        return (self.text_clr, self.text_clr_sel, self.text_clr_disabled)
+
+    def SetBgColor(self, clr=None, clr_sel=None, clr_disabled=None):
+        """
+        set the background colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        GetColour = wx.SystemSettings.GetColour
+        self.bg_clr = clr
+        if not self.bg_clr:
+            self.bg_clr = GetColour(wx.SYS_COLOUR_WINDOW)
+        self.bg_clr_sel = clr_sel
+        if not self.bg_clr_sel:
+            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_HIGHLIGHT)
+        self.bg_clr_disabled = clr_disabled
+        if not self.bg_clr_disabled:
+            self.bg_clr_disabled = GetColour(wx.SYS_COLOUR_3DFACE)
+
+    def GetBgColor(self):
+        """get the background colors"""
+        return (self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled)
 
     def PrepareDrawRect(self, p):
         """calculate the rect for each section"""
@@ -63,7 +121,10 @@ class PropArtNative(object):
         p.regions['label'].x = x + mx*2
 
         if not p.IsSeparator():
-            p.regions['label'].SetRight(p.title_width)
+            title_width = p.title_width
+            if title_width < 0:
+                title_width = self.title_width
+            p.regions['label'].SetRight(title_width)
             x = p.regions['label'].right
 
             rc = wx.Rect(*irc)
@@ -156,13 +217,25 @@ class PropArtNative(object):
             crtxt = wx.BLACK
             if not p.IsEnabled() or p.IsReadonly():
                 crtxt = p.text_clr_disabled
+                if not crtxt:
+                    crtxt = self.text_clr_disabled
                 crbg = p.bg_clr_disabled
+                if not crbg:
+                    crbg = self.bg_clr_disabled
             elif p.activated:
                 crtxt = p.text_clr_sel
+                if not crtxt:
+                    crtxt = self.text_clr_sel
                 crbg = p.bg_clr_sel
+                if not crbg:
+                    crbg = self.bg_clr_sel
             else:
                 crtxt = p.text_clr
+                if not crtxt:
+                    crtxt = self.text_clr
                 crbg = p.bg_clr
+                if not crbg:
+                    crbg = self.bg_clr
 
             dc.SetPen(wx.Pen(crtxt, 1, wx.PENSTYLE_TRANSPARENT))
             dc.SetBrush(wx.Brush(crbg))
@@ -240,6 +313,55 @@ class PropArtNative(object):
 
         self.DrawSelectedBox(dc, p)
 
+class PropArtSimple(PropArtNative):
+    def __init__(self):
+        super(PropArtSimple, self).__init__()
+
+    def PrepareDrawRect(self, p):
+        """calculate the rect for each section"""
+        mx = self.margin_x
+        irc = p.GetRect()
+        x = irc.x + mx + p.indent*self.indent_width
+        # expander icon
+        rc = wx.Rect(*irc)
+        rc.x = x + mx
+        rc.SetWidth(self.expansion_width)
+        p.regions['expander'] = rc
+        x = rc.right
+
+        # label
+        p.regions['label'] = wx.Rect(*irc)
+        p.regions['label'].x = x + mx*2
+
+        if not p.IsSeparator():
+            title_width = p.title_width
+            if title_width < 0:
+                title_width = self.title_width
+            p.regions['label'].SetRight(title_width)
+            x = p.regions['label'].right
+
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(self.splitter_width)
+            p.regions['splitter'] = rc
+            x = rc.right
+
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(irc.right-x)
+            rc.Deflate(1, 1)
+            p.regions['value'] = rc
+        else:
+            # separator does not have splitter & value
+            p.regions['label'].SetWidth(irc.right-p.regions['check'].right)
+            p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
+            p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
+
+    def DrawGripper(self, dc, p):
+        pass
+    def DrawCheck(self, dc, p):
+        pass
+
 class PropArtDefault(PropArtNative):
     def __init__(self):
         super(PropArtDefault, self).__init__()
@@ -255,7 +377,6 @@ class PropArtDefault(PropArtNative):
     def DrawCheck(self, dc, p):
         # draw radio button
         if p.IsShowCheck():
-            render = wx.RendererNative.Get()
             state = 0
             if not p.IsEnabled():
                 state = 1

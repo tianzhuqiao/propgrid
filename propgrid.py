@@ -7,7 +7,7 @@ import wx.py.dispatcher as dp
 import wx.lib.agw.aui as aui
 from .prop import *
 from .formatters import *
-from .propart import PropArtDefault
+from .propart import PropArtDefault, PropArtSimple
 
 wxEVT_PROP_INSERT = wx.NewEventType()
 wxEVT_PROP_DELETE = wx.NewEventType()
@@ -87,7 +87,6 @@ class PropGrid(wx.ScrolledWindow):
     def __init__(self, frame):
         wx.ScrolledWindow.__init__(self, frame)
 
-        self.title_width = 150
         self.prop_selected = None
         self.cursor_mode = self.CURSOR_STD
         self.pos_mouse_down = wx.Point(0, 0)
@@ -638,7 +637,6 @@ class PropGrid(wx.ScrolledWindow):
                 continue
             rc_prop = p.GetRect()
             if rc.Intersects(rc_prop):
-                p.SetTitleWidth(self.title_width)
                 self._art.DrawItem(dc, p)
 
     def OnSize(self, evt):
@@ -765,7 +763,7 @@ class PropGrid(wx.ScrolledWindow):
             # resize the property
             if self.resize_mode == self.RESIZE_SEP:
                 # resize the title width for all properties
-                self.title_width = max(evt.GetX(), 50)
+                self._art.SetTitleWidth(max(evt.GetX(), 50))
                 self.Refresh(False)
             elif self.resize_mode == self.RESIZE_BOT:
                 # change the height for the property
@@ -877,17 +875,19 @@ class PropGrid(wx.ScrolledWindow):
 class PropSettings(wx.Dialog):
     def __init__(self, parent, prop):
         wx.Dialog.__init__(self, parent, title="Settings...",
-                           size=wx.Size(402, 494),
+                           size=wx.Size(600, 460),
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
         self.propgrid = PropGrid(self)
+        self.propgrid.SetArtProvider(PropArtSimple())
+        self.propgrid.GetArtProvider().SetTitleWidth(200)
         self.prop = prop
         if prop.IsSeparator():
             self.items = (('name', 'Name', '', 'editbox'),
                           ('label', 'Label', '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
-                          ('font_label', 'Label font', '', 'font'),
-                          ('font_value', 'Value font', '', 'font')
+                          ('font_label', 'Label font', '_font_label', 'font'),
+                          ('font_value', 'Value font', '_font_value', 'font')
                           )
         else:
             self.items = (('name', 'Name', '', 'editbox'),
@@ -895,24 +895,26 @@ class PropSettings(wx.Dialog):
                           ('indent', 'Indent level', '', 'spin'),
                           ('show_check', 'Show check icon', '', 'checkbox'),
                           ('enable', 'Enable', '', 'checkbox'),
-                          ('font_label', 'Label font', '', 'font'),
-                          ('font_value', 'Value font', '', 'font'),
+                          ('font_label', 'Label font', '_font_label', 'font'),
+                          ('font_value', 'Value font', '_font_value', 'font'),
                           ('readonly', 'Read only', '', 'checkbox'),
-                          ('text_clr', 'Normal text color', '', 'color'),
-                          ('text_clr_sel', 'Selected text color', '', 'color'),
-                          ('text_clr_disabled', 'Disable text color', '', 'color'),
-                          ('bg_clr', 'Normal background color', '', 'color'),
-                          ('bg_clr_sel', 'Selected background color', '', 'color'),
-                          ('bg_clr_disabled', 'Disable background color', '', 'color'))
+                          ('text_clr', 'Normal text color', 'text_clr', 'color'),
+                          ('text_clr_sel', 'Selected text color', 'text_clr_sel', 'color'),
+                          ('text_clr_disabled', 'Disable text color', 'text_clr_disabled', 'color'),
+                          ('bg_clr', 'Normal background color', 'bg_clr', 'color'),
+                          ('bg_clr_sel', 'Selected background color', 'bg_clr_sel', 'color'),
+                          ('bg_clr_disabled', 'Disable background color', 'bg_clr_disabled', 'color'))
 
-        for (name, label, tip, ctrl) in self.items:
+        for (name, label, gname, ctrl) in self.items:
             pp = self.propgrid.InsertProperty(name, label, '')
             if prop:
                 v = getattr(prop, name)
             else:
                 v = ""
+            if v is None and gname:
+                v = getattr(prop.grid.GetArtProvider(), gname)
+
             pp.SetLabelTip(label)
-            pp.SetValueTip(tip)
             pp.SetControlStyle(ctrl)
             if ctrl == 'check':
                 pp.SetValue(v)
@@ -924,6 +926,7 @@ class PropSettings(wx.Dialog):
                 t.SetRGB(t.GetRGB()^0xffffff)
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
+                pp.SetFormatter(ColorFormatter())
             elif ctrl == 'font':
                 pp.SetValueFont(v)
                 pp.SetValue(v)
@@ -966,7 +969,8 @@ class PropSettings(wx.Dialog):
             t.SetRGB(t.GetRGB()^0xFFFFFF)
             t = t.GetAsString(wx.C2S_HTML_SYNTAX)
             p.SetTextColor(t, t, t)
-
+        elif 'font_' in p.GetName():
+            p.SetValueFont(p.GetValue())
     def OnBtnOk(self, event):
         if self.propgrid.prop_selected:
             # update the value if necessary
@@ -976,7 +980,7 @@ class PropSettings(wx.Dialog):
             v = self.propgrid.GetProperty(name)
             if ctrl == 'check':
                 setattr(self.prop, name, bool(int(v.GetValue())))
-            if ctrl == 'font':
+            if getattr(self.prop, name) is None:
                 setattr(self.prop, name, v.GetValue())
             else:
                 setattr(self.prop, name, type(getattr(self.prop, name))(v.GetValue()))

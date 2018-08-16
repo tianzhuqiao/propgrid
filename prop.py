@@ -51,7 +51,8 @@ class Property(object):
         self.label_tip = ''
         self.value = value
         self.value_tip = ''
-        self.title_width = 80
+        # -1 to use the default one defined in parent's art provider
+        self.title_width = -1
         self.indent = 0
         self.show_check = False
         self.checked = False
@@ -412,16 +413,9 @@ class Property(object):
         default.
         """
         self.text_clr = clr
-        if not self.text_clr:
-            self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT).\
-                             GetAsString(wx.C2S_HTML_SYNTAX)
         self.text_clr_sel = clr_sel
-        if not self.text_clr_sel:
-            self.text_clr_sel = wx.WHITE.GetAsString(wx.C2S_HTML_SYNTAX)
         self.text_clr_disabled = clr_disabled
-        if not self.text_clr_disabled:
-            self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)\
-                                    .GetAsString(wx.C2S_HTML_SYNTAX)
+
         if not silent:
             self.Refresh()
 
@@ -436,16 +430,10 @@ class Property(object):
         All values are string. If the value is None, the color will reset to
         default.
         """
-        GetColour = wx.SystemSettings.GetColour
         self.bg_clr = clr
-        if not self.bg_clr:
-            self.bg_clr = GetColour(wx.SYS_COLOUR_WINDOW).GetAsString(wx.C2S_HTML_SYNTAX)
         self.bg_clr_sel = clr_sel
-        if not self.bg_clr_sel:
-            self.bg_clr_sel = GetColour(wx.SYS_COLOUR_HIGHLIGHT).GetAsString(wx.C2S_HTML_SYNTAX)
         self.bg_clr_disabled = clr_disabled
-        if not self.bg_clr_disabled:
-            self.bg_clr_disabled = GetColour(wx.SYS_COLOUR_3DFACE).GetAsString(wx.C2S_HTML_SYNTAX)
+
         if not silent:
             self.Refresh()
 
