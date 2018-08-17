@@ -67,7 +67,6 @@ class Property(object):
         self.ctrl_type = self.controls.default
         self.window = None
         self.parent = -1
-        self.SetGripperColor()
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
         self.min_size = wx.Size(200, 25)
@@ -107,7 +106,6 @@ class Property(object):
         p.readonly = self.readonly
         p.ctrl_type = self.ctrl_type
         p.parent = self.parent
-        p.SetGripperColor(self.gripper_clr)
         p.SetTextColor(self.text_clr, self.text_clr_sel, self.text_clr_disabled, True)
         p.SetBgColor(self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled, True)
         p.show_label_tips = self.show_label_tips
@@ -398,11 +396,6 @@ class Property(object):
         """return true if the property is readonly"""
         return self.readonly
 
-    def SetGripperColor(self, clr=None):
-        self.gripper_clr = clr
-
-    def GetGripperColor(self):
-        return self.gripper_clr
 
     def SetTextColor(self, clr=None, clr_sel=None, clr_disabled=None,
                      silent=False):

@@ -13,7 +13,7 @@ class PropArtNative(object):
         self.expansion_width = 12
         self.check_width = 16
         self.splitter_width = 8
-        self.indent_width = 20
+        self.indent_width = 28
         self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         self._font_value = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
@@ -95,26 +95,23 @@ class PropArtNative(object):
         mx = self.margin_x
         irc = p.GetRect()
         x = irc.x
+        x = x + mx*2 + p.indent*self.indent_width
 
-        rc = wx.Rect(*irc)
-        rc.x = x + mx + p.indent*self.indent_width
-        rc.SetWidth(6)
-        p.regions['gripper'] = rc
-        x = rc.right
+        if self.expansion_width > 0 and p.HasChildren():
+            # expander icon
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(self.expansion_width)
+            p.regions['expander'] = rc
+            x = rc.right
 
-        # expander icon
-        rc = wx.Rect(*irc)
-        rc.x = x + mx
-        rc.SetWidth(self.expansion_width)
-        p.regions['expander'] = rc
-        x = rc.right
-
-        # radio/check icon
-        rc = wx.Rect(*irc)
-        rc.x = x + mx
-        rc.SetWidth(self.check_width+2)
-        p.regions['check'] = rc
-        x = rc.right
+        if self.check_width > 0 and p.IsShowCheck():
+            # radio/check icon
+            rc = wx.Rect(*irc)
+            rc.x = x + mx
+            rc.SetWidth(self.check_width+2)
+            p.regions['check'] = rc
+            x = rc.right
 
         # label
         p.regions['label'] = wx.Rect(*irc)
@@ -134,29 +131,19 @@ class PropArtNative(object):
             x = rc.right
 
             rc = wx.Rect(*irc)
-            rc.x = x + mx
+            rc.x = x
             rc.SetWidth(irc.right-x)
             rc.Deflate(1, 1)
             p.regions['value'] = rc
         else:
             # separator does not have splitter & value
-            p.regions['label'].SetWidth(irc.right-p.regions['check'].right)
+            p.regions['label'].SetWidth(p.regions['label'].GetWidth() + irc.right-x)
             p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
             p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
 
-    def DrawGripper(self, dc, p):
-        # draw gripper
-        if p.gripper_clr:
-            pen = wx.Pen(wx.BLACK, 1, wx.PENSTYLE_TRANSPARENT)
-            dc.SetPen(pen)
-
-            dc.SetBrush(wx.Brush(p.gripper_clr))
-            rc = p.regions['gripper']
-            dc.DrawRectangle(rc.x, rc.y+1, 3, rc.height-1)
-
     def DrawCheck(self, dc, p):
         # draw radio button
-        if p.IsShowCheck():
+        if self.check_width > 0 and p.IsShowCheck():
             render = wx.RendererNative.Get()
             state = 0
             if not p.IsEnabled():
@@ -253,7 +240,7 @@ class PropArtNative(object):
             dc.DestroyClippingRegion()
 
     def DrawExpansion(self, dc, p):
-        if p.HasChildren():
+        if self.expansion_width > 0 and p.HasChildren():
             w, h = self.expansion_width, self.expansion_width
             rc = p.regions['expander']
             x = rc.x+(rc.width-w)/2
@@ -299,10 +286,7 @@ class PropArtNative(object):
         dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
         dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
 
-
-
         self.DrawExpansion(dc, p)
-        self.DrawGripper(dc, p)
         self.DrawLabel(dc, p)
 
         # separator does not have radio button, splitter bar and value sections
@@ -316,49 +300,7 @@ class PropArtNative(object):
 class PropArtSimple(PropArtNative):
     def __init__(self):
         super(PropArtSimple, self).__init__()
-
-    def PrepareDrawRect(self, p):
-        """calculate the rect for each section"""
-        mx = self.margin_x
-        irc = p.GetRect()
-        x = irc.x + mx + p.indent*self.indent_width
-        # expander icon
-        rc = wx.Rect(*irc)
-        rc.x = x + mx
-        rc.SetWidth(self.expansion_width)
-        p.regions['expander'] = rc
-        x = rc.right
-
-        # label
-        p.regions['label'] = wx.Rect(*irc)
-        p.regions['label'].x = x + mx*2
-
-        if not p.IsSeparator():
-            title_width = p.title_width
-            if title_width < 0:
-                title_width = self.title_width
-            p.regions['label'].SetRight(title_width)
-            x = p.regions['label'].right
-
-            rc = wx.Rect(*irc)
-            rc.x = x + mx
-            rc.SetWidth(self.splitter_width)
-            p.regions['splitter'] = rc
-            x = rc.right
-
-            rc = wx.Rect(*irc)
-            rc.x = x + mx
-            rc.SetWidth(irc.right-x)
-            rc.Deflate(1, 1)
-            p.regions['value'] = rc
-        else:
-            # separator does not have splitter & value
-            p.regions['label'].SetWidth(irc.right-p.regions['check'].right)
-            p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
-            p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
-
-    def DrawGripper(self, dc, p):
-        pass
+        self.check_width = 0
     def DrawCheck(self, dc, p):
         pass
 

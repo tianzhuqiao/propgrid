@@ -84,9 +84,10 @@ class PropGrid(wx.ScrolledWindow):
     CURSOR_RESIZE_VERT = 1
     CURSOR_STD = 2
 
-    def __init__(self, frame):
+    def __init__(self, frame, prop_cls=Property):
         wx.ScrolledWindow.__init__(self, frame)
 
+        self._prop_cls = prop_cls
         self.prop_selected = None
         self.cursor_mode = self.CURSOR_STD
         self.pos_mouse_down = wx.Point(0, 0)
@@ -167,7 +168,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def InsertProperty(self, name, label="", value="", index=-1, update=True):
         # add the prop window to the grid
-        prop = Property(self, name, label, value)
+        prop = self._prop_cls(self, name, label, value)
         return self._InsertProperty(prop, index, update)
 
     def CopyProperty(self, prop, index=-1, update=True):
