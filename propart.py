@@ -8,7 +8,8 @@ def BitmapFromXPM(xpm):
 class PropArtNative(object):
 
     def __init__(self):
-        self.margin_x = 2
+        self.margin = {'top':0, 'bottom':0, 'left':0, 'right':0}
+        self.gap_x = 2
         self.title_width = 150
         self.expansion_width = 12
         self.check_width = 16
@@ -92,8 +93,12 @@ class PropArtNative(object):
 
     def PrepareDrawRect(self, p):
         """calculate the rect for each section"""
-        mx = self.margin_x
+        mx = self.gap_x
         irc = p.GetRect()
+        irc.SetLeft(irc.GetLeft()+self.margin['left'])
+        irc.SetRight(irc.GetRight()+self.margin['right'])
+        irc.SetTop(irc.GetTop()+self.margin['top'])
+        irc.SetBottom(irc.GetBottom()+self.margin['bottom'])
         x = irc.x
         x = x + mx*2 + p.indent*self.indent_width
 
