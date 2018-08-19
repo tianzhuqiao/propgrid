@@ -22,7 +22,6 @@ wxEVT_PROP_RESIZE = wx.NewEventType()
 wxEVT_PROP_REFRESH = wx.NewEventType()
 wxEVT_PROP_DROP = wx.NewEventType()
 wxEVT_PROP_BEGIN_DRAG = wx.NewEventType()
-wxEVT_PROP_CLICK_CHECK = wx.NewEventType()
 
 EVT_PROP_SELECTED = wx.PyEventBinder(wxEVT_PROP_SELECTED, 1)
 EVT_PROP_CHANGING = wx.PyEventBinder(wxEVT_PROP_CHANGING, 1)
@@ -38,7 +37,6 @@ EVT_PROP_RESIZE = wx.PyEventBinder(wxEVT_PROP_RESIZE, 1)
 EVT_PROP_REFRESH = wx.PyEventBinder(wxEVT_PROP_REFRESH, 1)
 EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
-EVT_PROP_CLICK_CHECK = wx.PyEventBinder(wxEVT_PROP_CLICK_CHECK, 1)
 
 class Property(object):
     controls = EnumType('default', 'none', 'editbox', 'choice', 'file', 'folder',
@@ -54,8 +52,6 @@ class Property(object):
         # -1 to use the default one defined in parent's art provider
         self.title_width = -1
         self.indent = 0
-        self.show_check = False
-        self.checked = False
         self.activated = False
         self.enable = True
         self.font_label = None
@@ -92,8 +88,6 @@ class Property(object):
         p.value_tip = self.value_tip
         p.title_width = self.title_width
         p.indent = self.indent
-        p.show_check = self.show_check
-        p.checked = self.checked
         p.activated = self.activated
         p.enable = self.enable
         if p.font_label:
@@ -240,30 +234,6 @@ class Property(object):
         """return the parent property"""
         return self.parent
 
-    def SetShowCheck(self, show=True, silent=True):
-        """show/hide radio button"""
-        if self.show_check == show:
-            return
-        self.show_check = show
-        if not silent:
-            self.Refresh()
-
-    def IsShowCheck(self):
-        """return whether the icon is shown"""
-        return self.show_check
-
-    def SetChecked(self, check=True, silent=False):
-        """check/uncheck the radio button"""
-        if check != self.IsChecked():
-            self.checked = check
-            if not self.SendPropEvent(wxEVT_PROP_CLICK_CHECK):
-                self.checked = not check
-            if not silent:
-                self.Refresh()
-
-    def IsChecked(self):
-        """return true if the radio button is checked"""
-        return self.checked
 
     def SetValue(self, value, silent=False):
         """set the value"""
@@ -316,7 +286,7 @@ class Property(object):
             formatter = None
         self.formatter = formatter
 
-    def GetFormatter(self, formatter):
+    def GetFormatter(self):
         return self.formatter
 
     def SetIndent(self, indent, silent=False):
@@ -518,11 +488,6 @@ class Property(object):
 
     def OnMouseUp(self, pt):
         ht = self.HitTest(pt)
-        if self.IsEnabled():
-            # click on the check icon? change the state
-            if self.IsShowCheck() and ht == 'check':
-                checked = self.IsChecked()
-                self.SetChecked(not checked)
         return ht
 
     def OnMouseDoubleClick(self, pt):
@@ -748,7 +713,6 @@ class Property(object):
             return
 
         value_old = self.value
-        style = self.ctrl_type
         value = None
         if isinstance(self.window, wx.TextCtrl):
             value = self.window.GetValue()

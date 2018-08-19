@@ -7,7 +7,6 @@ class PropArtNative(object):
         self.gap_x = 2
         self.title_width = 150
         self.expansion_width = 12
-        self.check_width = 16
         self.splitter_width = 8
         self.indent_width = 28
         self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
@@ -105,14 +104,6 @@ class PropArtNative(object):
             p.regions['expander'] = rc
             x = rc.right
 
-        if self.check_width > 0 and p.IsShowCheck():
-            # radio/check icon
-            rc = wx.Rect(*irc)
-            rc.x = x + mx
-            rc.SetWidth(self.check_width+2)
-            p.regions['check'] = rc
-            x = rc.right
-
         # label
         p.regions['label'] = wx.Rect(*irc)
         p.regions['label'].x = x + mx*2
@@ -140,24 +131,6 @@ class PropArtNative(object):
             p.regions['label'].SetWidth(p.regions['label'].GetWidth() + irc.right-x)
             p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
             p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
-
-    def DrawCheck(self, dc, p):
-        # draw radio button
-        if self.check_width > 0 and p.IsShowCheck():
-            render = wx.RendererNative.Get()
-            state = 0
-            if not p.IsEnabled():
-                state |= wx.CONTROL_DISABLED
-            if p.IsChecked():
-                state |= wx.CONTROL_CHECKED
-            if p.IsActivated():
-                state |= wx.CONTROL_FOCUSED
-
-            w, h = self.check_width, self.check_width
-            rc = p.regions['check']
-            x = rc.x+(rc.width-w)/2
-            y = rc.y+(rc.height-h)/2+1
-            render.DrawRadioBitmap(p.grid, dc, (x, y, w, h), state)
 
     def DrawSplitter(self, dc, p):
         # draw splitter
@@ -291,7 +264,6 @@ class PropArtNative(object):
 
         # separator does not have radio button, splitter bar and value sections
         if not p.IsSeparator():
-            self.DrawCheck(dc, p)
             self.DrawSplitter(dc, p)
             self.DrawValue(dc, p)
 

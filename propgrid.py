@@ -134,7 +134,6 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(EVT_PROP_REFRESH, self.OnPropRefresh)
         self.Bind(EVT_PROP_DROP, self.OnPropEventsHandler)
         self.Bind(EVT_PROP_BEGIN_DRAG, self.OnPropEventsHandler)
-        self.Bind(EVT_PROP_CLICK_CHECK, self.OnPropEventsHandler)
         self.Bind(wx.EVT_MENU, self.OnProcessCommand)
 
     def SetArtProvider(self, art):
@@ -892,7 +891,6 @@ class PropSettings(wx.Dialog):
             self.items = (('name', 'Name', '', 'editbox'),
                           ('label', 'Label', '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
-                          ('show_check', 'Show check icon', '', 'checkbox'),
                           ('enable', 'Enable', '', 'checkbox'),
                           ('font_label', 'Label font', '_font_label', 'font'),
                           ('font_value', 'Value font', '_font_value', 'font'),
@@ -902,7 +900,7 @@ class PropSettings(wx.Dialog):
                           ('text_clr_disabled', 'Disable text color', 'text_clr_disabled', 'color'),
                           ('bg_clr', 'Normal background color', 'bg_clr', 'color'),
                           ('bg_clr_sel', 'Selected background color', 'bg_clr_sel', 'color'),
-                          ('bg_clr_disabled', 'Disable background color', 'bg_clr_disabled', 'color'))
+                          ('bg_clr_disabled', 'Disabled background color', 'bg_clr_disabled', 'color'))
 
         for (name, label, gname, ctrl) in self.items:
             pp = self.propgrid.InsertProperty(name, label, '')
@@ -915,7 +913,7 @@ class PropSettings(wx.Dialog):
 
             pp.SetLabelTip(label)
             pp.SetControlStyle(ctrl)
-            if ctrl == 'check':
+            if ctrl == 'checkbox':
                 pp.SetValue(v)
                 pp.SetFormatter(BoolFormatter())
             elif ctrl == 'color':
@@ -977,7 +975,7 @@ class PropSettings(wx.Dialog):
 
         for (name, _, _, ctrl) in self.items:
             v = self.propgrid.GetProperty(name)
-            if ctrl == 'check':
+            if ctrl == 'checkbox':
                 setattr(self.prop, name, bool(int(v.GetValue())))
             if getattr(self.prop, name) is None:
                 setattr(self.prop, name, v.GetValue())

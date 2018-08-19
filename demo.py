@@ -17,33 +17,10 @@ class PropArtCustom(pa.PropArtNative):
     def __init__(self):
         super(PropArtCustom, self).__init__()
 
-        self.img_check = wx.ImageList(16, 16, True, 4)
         self.img_expand = wx.ImageList(12, 12, True, 2)
-        self.img_check.Add(BitmapFromXPM(radio_xpm))
         self.img_expand.Add(BitmapFromXPM(tree_xpm))
 
         self.expansion_width = 12
-        self.check_width = 16
-
-    def DrawCheck(self, dc, p):
-        # draw radio button
-        if p.IsShowCheck():
-            state = 0
-            if not p.IsEnabled():
-                state = 1
-            elif p.IsChecked():
-                state = 2
-                if p.IsActivated():
-                    state = 3
-
-            if self.img_check.GetImageCount() == 4:
-                (w, h) = self.img_check.GetSize(0)
-                rc = p.regions['check']
-                x = rc.x+(rc.width-w)/2
-                y = rc.y+(rc.height-h)/2+1
-                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-            else:
-                super(PropArtCustom, self).DrawCheck(dc, p)
 
     def DrawExpansion(self, dc, p):
         if p.HasChildren():
@@ -108,10 +85,6 @@ class MainFrame(wx.Frame):
         p = g.InsertProperty('bold', 'bold', 'hello world!')
         p.SetIndent(1)
         p.SetValueFont(wx.Font(wx.NORMAL_FONT).Bold())
-
-        p = g.InsertProperty('with check', 'with check', 'hello world!')
-        p.SetIndent(1)
-        p.SetShowCheck(True)
 
         p = g.InsertProperty('integer', 'integer', 42)
         p.SetIndent(1)
