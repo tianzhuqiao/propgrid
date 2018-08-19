@@ -7,7 +7,7 @@ import wx.py.dispatcher as dp
 import wx.lib.agw.aui as aui
 from .prop import *
 from .formatters import *
-from .propart import PropArtDefault, PropArtSimple
+from .propart import PropArtNative
 
 wxEVT_PROP_INSERT = wx.NewEventType()
 wxEVT_PROP_DELETE = wx.NewEventType()
@@ -95,7 +95,7 @@ class PropGrid(wx.ScrolledWindow):
         self.resize_mode = self.RESIZE_NONE
 
         self._props = []
-        self._art = PropArtDefault()
+        self._art = PropArtNative()
 
         # cursor
         self.resize_cursor_horz = wx.Cursor(wx.CURSOR_SIZEWE)
@@ -880,7 +880,6 @@ class PropSettings(wx.Dialog):
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
         self.propgrid = PropGrid(self)
-        self.propgrid.SetArtProvider(PropArtSimple())
         self.propgrid.GetArtProvider().SetTitleWidth(200)
         self.prop = prop
         if prop.IsSeparator():
@@ -888,8 +887,7 @@ class PropSettings(wx.Dialog):
                           ('label', 'Label', '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
                           ('font_label', 'Label font', '_font_label', 'font'),
-                          ('font_value', 'Value font', '_font_value', 'font')
-                          )
+                          ('font_value', 'Value font', '_font_value', 'font'))
         else:
             self.items = (('name', 'Name', '', 'editbox'),
                           ('label', 'Label', '', 'editbox'),

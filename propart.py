@@ -1,9 +1,4 @@
 import wx
-from .propxpm import radio_xpm, tree_xpm
-
-def BitmapFromXPM(xpm):
-    xpm_b = [x.encode('utf-8') for x in xpm]
-    return wx.Bitmap(xpm_b)
 
 class PropArtNative(object):
 
@@ -301,56 +296,3 @@ class PropArtNative(object):
             self.DrawValue(dc, p)
 
         self.DrawSelectedBox(dc, p)
-
-class PropArtSimple(PropArtNative):
-    def __init__(self):
-        super(PropArtSimple, self).__init__()
-        self.check_width = 0
-    def DrawCheck(self, dc, p):
-        pass
-
-class PropArtDefault(PropArtNative):
-    def __init__(self):
-        super(PropArtDefault, self).__init__()
-
-        self.img_check = wx.ImageList(16, 16, True, 4)
-        self.img_expand = wx.ImageList(12, 12, True, 2)
-        self.img_check.Add(BitmapFromXPM(radio_xpm))
-        self.img_expand.Add(BitmapFromXPM(tree_xpm))
-
-        self.expansion_width = 12
-        self.check_width = 16
-
-    def DrawCheck(self, dc, p):
-        # draw radio button
-        if p.IsShowCheck():
-            state = 0
-            if not p.IsEnabled():
-                state = 1
-            elif p.IsChecked():
-                state = 2
-                if p.IsActivated():
-                    state = 3
-
-            if self.img_check.GetImageCount() == 4:
-                (w, h) = self.img_check.GetSize(0)
-                rc = p.regions['check']
-                x = rc.x+(rc.width-w)/2
-                y = rc.y+(rc.height-h)/2+1
-                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-            else:
-                super(PropArtDefault, self).DrawCheck(dc, p)
-
-    def DrawExpansion(self, dc, p):
-        if p.HasChildren():
-            if self.img_expand.GetImageCount() == 2:
-                (w, h) = self.img_expand.GetSize(0)
-                rc = p.regions['expander']
-                x = rc.x+(rc.width-w)/2
-                y = rc.y+(rc.height-h)/2+1
-                idx = 0
-                if not p.IsExpanded():
-                    idx = 1
-                self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
-            else:
-                super(PropArtDefault, self).DrawExpansion(dc, p)

@@ -7,6 +7,58 @@ from . import formatters as fmt
 from . import enumtype
 from . import propart as pa
 
+from .propxpm import radio_xpm, tree_xpm
+
+def BitmapFromXPM(xpm):
+    xpm_b = [x.encode('utf-8') for x in xpm]
+    return wx.Bitmap(xpm_b)
+
+class PropArtCustom(pa.PropArtNative):
+    def __init__(self):
+        super(PropArtCustom, self).__init__()
+
+        self.img_check = wx.ImageList(16, 16, True, 4)
+        self.img_expand = wx.ImageList(12, 12, True, 2)
+        self.img_check.Add(BitmapFromXPM(radio_xpm))
+        self.img_expand.Add(BitmapFromXPM(tree_xpm))
+
+        self.expansion_width = 12
+        self.check_width = 16
+
+    def DrawCheck(self, dc, p):
+        # draw radio button
+        if p.IsShowCheck():
+            state = 0
+            if not p.IsEnabled():
+                state = 1
+            elif p.IsChecked():
+                state = 2
+                if p.IsActivated():
+                    state = 3
+
+            if self.img_check.GetImageCount() == 4:
+                (w, h) = self.img_check.GetSize(0)
+                rc = p.regions['check']
+                x = rc.x+(rc.width-w)/2
+                y = rc.y+(rc.height-h)/2+1
+                self.img_check.Draw(state, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
+            else:
+                super(PropArtCustom, self).DrawCheck(dc, p)
+
+    def DrawExpansion(self, dc, p):
+        if p.HasChildren():
+            if self.img_expand.GetImageCount() == 2:
+                (w, h) = self.img_expand.GetSize(0)
+                rc = p.regions['expander']
+                x = rc.x+(rc.width-w)/2
+                y = rc.y+(rc.height-h)/2+1
+                idx = 0
+                if not p.IsExpanded():
+                    idx = 1
+                self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
+            else:
+                super(PropArtCustom, self).DrawExpansion(dc, p)
+
 class MainFrame(wx.Frame):
     ID_ART_NATIVE = wx.NewId()
     ID_ART_DEFAULT = wx.NewId()
@@ -23,10 +75,10 @@ class MainFrame(wx.Frame):
                               | aui.AUI_MGR_LIVE_RESIZE)
         menubar = wx.MenuBar()
         viewMenu = wx.Menu()
-        item = wx.MenuItem(viewMenu, self.ID_ART_DEFAULT, text="Default Art",
+        item = wx.MenuItem(viewMenu, self.ID_ART_NATIVE, text="Native Art",
                            kind=wx.ITEM_CHECK)
         viewMenu.Append(item)
-        item = wx.MenuItem(viewMenu, self.ID_ART_NATIVE, text="Native Art",
+        item = wx.MenuItem(viewMenu, self.ID_ART_DEFAULT, text="Customized Art",
                            kind=wx.ITEM_CHECK)
         viewMenu.Append(item)
         menubar.Append(viewMenu, '&Options')
@@ -232,7 +284,7 @@ class MainFrame(wx.Frame):
         if eid == self.ID_ART_NATIVE:
             event.Check(type(self.propgrid.GetArtProvider()) == pa.PropArtNative)
         elif eid == self.ID_ART_DEFAULT:
-            event.Check(type(self.propgrid.GetArtProvider()) == pa.PropArtDefault)
+            event.Check(type(self.propgrid.GetArtProvider()) == PropArtCustom)
         else:
             event.Skip()
 
@@ -241,7 +293,7 @@ class MainFrame(wx.Frame):
         if eid == self.ID_ART_NATIVE:
             self.propgrid.SetArtProvider(pa.PropArtNative())
         elif eid == self.ID_ART_DEFAULT:
-            self.propgrid.SetArtProvider(pa.PropArtDefault())
+            self.propgrid.SetArtProvider(PropArtCustom())
         else:
             event.Skip()
 
