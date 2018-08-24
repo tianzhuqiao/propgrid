@@ -555,13 +555,19 @@ class Property(object):
                     style = self.controls.time
         win = None
         if style == self.controls.editbox:
+            style=wx.TE_PROCESS_ENTER
+            sz = self.GetMinSize()
+            if sz.y > 50:
+                style = wx.TE_MULTILINE
             win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
-                              style=wx.TE_PROCESS_ENTER)
+                              style=style)
             if self.formatter:
                 validator = TextValidator(self, 'value', self.formatter,
                                           False, None)
                 win.SetValidator(validator)
-            win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
+
+            if style & wx.TE_PROCESS_ENTER:
+                win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
 
         elif style == self.controls.choice:
             win = wx.Choice(self.grid, wx.ID_ANY)
@@ -687,9 +693,7 @@ class Property(object):
         """re-positioning the control"""
         if self.window is None:
             return
-        (x, y) = self.grid.GetViewStart()
-        rc = wx.Rect(*self.regions['value'])
-        rc.Offset(wx.Point(-x*5, -y*5))
+        rc = self.grid.GetScrolledRect(wx.Rect(*self.regions['value']))
         self.window.SetSize(rc.GetSize())
         self.window.Move(rc.GetTopLeft())
 

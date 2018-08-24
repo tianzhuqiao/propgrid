@@ -78,7 +78,7 @@ class PropGrid(wx.ScrolledWindow):
     RESIZE_SEP = 1
     RESIZE_BOT = 2
 
-    SCROLL_UNIT = 5
+    SCROLL_UNIT = 15
 
     CURSOR_RESIZE_HORZ = 0
     CURSOR_RESIZE_VERT = 1
@@ -258,6 +258,12 @@ class PropGrid(wx.ScrolledWindow):
     def GetPropCount(self):
         """return the number of properties"""
         return len(self._props)
+
+    def GetScrolledRect(self, rc):
+        (x, y) = self.GetViewStart()
+        rcs = wx.Rect(*rc)
+        rcs.Offset(wx.Point(-x*self.SCROLL_UNIT, -y*self.SCROLL_UNIT))
+        return rcs
 
     def EnsureVisible(self, prop):
         """scroll the window to make sure prop is visible"""
@@ -612,8 +618,11 @@ class PropGrid(wx.ScrolledWindow):
 
     def OnPaint(self, event):
         """draw the property"""
-        dc = wx.GCDC(wx.PaintDC(self))
-        #dc = wx.BufferedPaintDC(self)
+        if wx.Platform == '__WXMSW__':
+            dc = wx.BufferedPaintDC(self)
+        else:
+            dc = wx.GCDC(wx.PaintDC(self))
+
         self.DoPrepareDC(dc)
 
         rc = self.GetDrawRect()
@@ -796,8 +805,7 @@ class PropGrid(wx.ScrolledWindow):
                             mode = self.CURSOR_RESIZE_VERT
                         else:
                             mode = self.CURSOR_STD
-                    #if prop.GetShowLabelTips() and ht == Property.PROP_HIT_TITLE:
-                    if ht == 'label':
+                    if prop.GetShowLabelTips():
                         tooltip = prop.GetLabelTip()
                     elif prop.GetShowValueTips() and ht == 'value':
                         tooltip = prop.GetValueTip()
