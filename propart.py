@@ -124,7 +124,6 @@ class PropArtNative(object):
             rc = wx.Rect(*irc)
             rc.x = x
             rc.SetWidth(irc.right-x)
-            rc.Deflate(1, 1)
             p.regions['value'] = rc
         else:
             # separator does not have splitter & value
@@ -226,8 +225,37 @@ class PropArtNative(object):
             else:
                 render.DrawTreeItemButton(p.grid, dc, (x, y, w, h))
 
-    def DrawSelectedBox(self, dc, p):
-        # draw select rectangle
+    def DrawBackground(self, dc, p):
+        # draw background
+        rc = p.GetRect()
+        bg = p.GetGrid().GetBackgroundColour()
+        pen = wx.Pen(wx.BLACK, 1, wx.PENSTYLE_TRANSPARENT)
+        dc.SetPen(pen)
+        brush = wx.Brush(bg)
+        dc.SetBrush(brush)
+        dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
+
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
+        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
+        dc.DrawLine(rc.right-1, rc.top, rc.right-1, rc.bottom)
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
+        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
+        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
+        dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
+
+    def DrawBorder(self, dc, p):
+        rc = p.GetRect()
+
+        # top & bottom border
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
+        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
+        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
+        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
+
+        # draw selected box
         if p.activated:
             dc.SetPen(wx.Pen(wx.BLACK, 1, wx.PENSTYLE_DOT))
             dc.SetBrush(wx.Brush(wx.BLACK, wx.BRUSHSTYLE_TRANSPARENT))
@@ -240,24 +268,9 @@ class PropArtNative(object):
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
 
-        rc = p.GetRect()
         self.PrepareDrawRect(p)
 
-        # draw background
-        bg = p.GetGrid().GetBackgroundColour()
-        pen = wx.Pen(wx.BLACK, 1, wx.PENSTYLE_TRANSPARENT)
-        dc.SetPen(pen)
-        brush = wx.Brush(bg)
-        dc.SetBrush(brush)
-        dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
-        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
-        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
-        dc.DrawLine(rc.right-1, rc.top, rc.right-1, rc.bottom)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
-        dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
+        self.DrawBackground(dc, p)
 
         self.DrawExpansion(dc, p)
         self.DrawLabel(dc, p)
@@ -267,4 +280,4 @@ class PropArtNative(object):
             self.DrawSplitter(dc, p)
             self.DrawValue(dc, p)
 
-        self.DrawSelectedBox(dc, p)
+        self.DrawBorder(dc, p)

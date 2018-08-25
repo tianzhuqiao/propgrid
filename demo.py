@@ -6,7 +6,6 @@ from . import propgrid as pg
 from . import formatters as fmt
 from . import enumtype
 from . import propart as pa
-
 from .propxpm import radio_xpm, tree_xpm
 
 def BitmapFromXPM(xpm):
@@ -21,6 +20,7 @@ class PropArtCustom(pa.PropArtNative):
         self.img_expand.Add(BitmapFromXPM(tree_xpm))
 
         self.expansion_width = 12
+        self.text_clr_sel = self.text_clr
 
     def DrawExpansion(self, dc, p):
         if p.HasChildren():
@@ -35,6 +35,126 @@ class PropArtCustom(pa.PropArtNative):
                 self.img_expand.Draw(idx, dc, x, y, wx.IMAGELIST_DRAW_TRANSPARENT)
             else:
                 super(PropArtCustom, self).DrawExpansion(dc, p)
+
+    def DrawLabel(self, dc, p):
+        # draw label
+        if p.font_label is None:
+            font = self._font_label
+        else:
+            font = wx.Font(p.font_label)
+        if p.IsActivated():
+            dc.SetFont(font.Bold())
+        else:
+            dc.SetFont(font)
+
+        if not p.IsEnabled() or p.IsReadonly():
+            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+        else:
+            clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
+        dc.SetTextForeground(clr)
+        rc = p.regions['label']
+        dc.SetClippingRegion(rc)
+        (w, h) = dc.GetTextExtent(p.label)
+
+        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h)/2)
+        p.show_label_tips = w > rc.width
+        dc.DestroyClippingRegion()
+
+    def DrawSplitter(self, dc, p):
+        # draw splitter
+        rcs = p.regions['splitter']
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
+        dc.DrawLine(rcs.right-1, rcs.top, rcs.right-1, rcs.bottom)
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
+        dc.DrawLine(rcs.right, rcs.top, rcs.right, rcs.bottom)
+
+    def DrawBackground(self, dc, p):
+        # draw background
+        rc = p.GetRect()
+        rcs = p.regions['splitter']
+        bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
+        brush = wx.Brush(bg)
+        dc.SetBrush(brush)
+        dc.DrawRectangle(rc.x, rc.y, rcs.right, rc.height)
+
+    def DrawValue(self, dc, p):
+        # draw value
+        if p.font_value is None:
+            font = self._font_value
+        else:
+            font = wx.Font(p.font_value)
+        dc.SetFont(font)
+
+        p.show_value_tips = False
+        if p.window is None:
+            crbg = p.bg_clr
+            crtxt = wx.BLACK
+            if not p.IsEnabled() or p.IsReadonly():
+                crtxt = p.text_clr_disabled
+                if not crtxt:
+                    crtxt = self.text_clr_disabled
+                crbg = p.bg_clr_disabled
+                if not crbg:
+                    crbg = self.bg_clr_disabled
+            elif p.activated:
+                crtxt = p.text_clr_sel
+                if not crtxt:
+                    crtxt = self.text_clr_sel
+                crbg = p.bg_clr_sel
+                if not crbg:
+                    crbg = self.bg_clr_sel
+            else:
+                crtxt = p.text_clr
+                if not crtxt:
+                    crtxt = self.text_clr
+                crbg = p.bg_clr
+                if not crbg:
+                    crbg = self.bg_clr
+            c = wx.Colour(crbg)
+            dc.SetPen(wx.Pen(wx.Colour(c), 1, wx.PENSTYLE_SOLID))
+            rc = p.regions['value']
+            rcbg = wx.Rect(*rc)
+
+            if p.activated:
+                dc.SetBrush(wx.Brush(wx.Colour(c.red, c.green, c.blue, 128)))
+                rcbg.Deflate(0, 1)
+            else:
+                dc.SetBrush(wx.Brush(wx.Colour(c.red, c.green, c.blue, 255)))
+
+            dc.DrawRectangle(rcbg)
+
+            dc.SetPen(wx.Pen(crtxt, 1, wx.PENSTYLE_TRANSPARENT))
+            dc.SetTextForeground(crtxt)
+
+            value = p.GetValueAsString()
+            (w, h) = dc.GetTextExtent(value)
+            dc.SetClippingRegion(rc)
+            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h)/2)
+            p.show_value_tips = rc.width < w
+            dc.DestroyClippingRegion()
+
+    def DrawBorder(self, dc, p):
+        rc = p.GetRect()
+        rcs = p.regions['splitter']
+        # value bottom border
+        crbg = p.bg_clr
+        if p.IsEnabled() and not p.IsReadonly():
+            crbg = p.bg_clr_disabled
+            if not crbg:
+                crbg = self.bg_clr_disabled
+        else:
+            crbg = p.bg_clr
+            if not crbg:
+                crbg = self.bg_clr
+
+        dc.SetPen(wx.Pen(wx.Colour(crbg)))
+        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+
+        # title top & bottom border
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
+        dc.DrawLine(rc.left, rc.bottom, rcs.right, rc.bottom)
+        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
+        dc.DrawLine(rc.left, rc.top, rcs.right, rc.top)
 
 class MainFrame(wx.Frame):
     ID_ART_NATIVE = wx.NewId()
@@ -67,7 +187,6 @@ class MainFrame(wx.Frame):
 
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
-
         # general
         p = g.InsertSeparator('general', 'general')
 
@@ -265,8 +384,10 @@ class MainFrame(wx.Frame):
         eid = event.GetId()
         if eid == self.ID_ART_NATIVE:
             self.propgrid.SetArtProvider(pa.PropArtNative())
+            self.propgrid.SetBackgroundColour(wx.NullColour)
         elif eid == self.ID_ART_DEFAULT:
             self.propgrid.SetArtProvider(PropArtCustom())
+            self.propgrid.SetBackgroundColour(wx.WHITE)
         else:
             event.Skip()
 

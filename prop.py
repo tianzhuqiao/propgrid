@@ -436,7 +436,7 @@ class Property(object):
         if self.window:
             size = self.window.GetSize()
             sz = self.min_size
-            size.y = max(sz.y, size.y+2)
+            size.y = max(sz.y, size.y)
             return size
         return wx.Size(*self.min_size)
 
