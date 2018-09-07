@@ -56,6 +56,49 @@ class Formatter(object):
         """Convert a string from the UI into a storable value."""
         return str_value
 
+class ChoiceFormatter(Formatter):
+    """
+    Formatter for choice data values.
+    """
+    def __init__(self, mapping, sort=None, *args, **kwargs):
+
+        super(ChoiceFormatter, self).__init__(*args, **kwargs)
+        # if mapping is a list, convert it to a dict
+        if isinstance(mapping, list):
+            mapping = {v: str(v) for v in mapping}
+        self.mapping = mapping
+        self.mapping_reverse = {v: k for k, v in six.iteritems(self.mapping)}
+        self.sort = sort
+
+    def validValues(self):
+        """
+        Return list of valid value (id,label) pairs.
+        """
+        items = list(six.iteritems(self.mapping))
+        if self.sort:
+            def sort_by_label(item):
+                return item[1]
+            key = None
+            if self.sort == 'label':
+                key = sort_by_label
+            items.sort(key=key)
+        return items
+
+    def validate(self, str_value):
+        """
+        Return true if value is valid for the field.
+        value is a string from the UI.
+        """
+        vv = [s for i, s in self.validValues()]
+        return str_value in vv
+
+    def format(self, value):
+        """Format a value for presentation in the UI."""
+        return self.mapping[value]
+
+    def coerce(self, str_value):
+        """Convert a string from the UI into a storable value."""
+        return self.mapping_reverse[str_value]
 
 class EnumFormatter(Formatter):
     """

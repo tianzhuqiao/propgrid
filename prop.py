@@ -536,7 +536,8 @@ class Property(object):
         style = self.ctrl_type
         if style == self.controls.default:
             style = self.controls.editbox
-            if isinstance(self.formatter, EnumFormatter):
+            if isinstance(self.formatter, EnumFormatter) or \
+               isinstance(self.formatter, ChoiceFormatter):
                 style = self.controls.choice
             elif isinstance(self.formatter, BoolFormatter):
                 style = self.controls.checkbox

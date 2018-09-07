@@ -221,6 +221,10 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
         p.SetFormatter(fmt.FloatFormatter())
 
+        p = g.InsertProperty('choice', 'choice', 2)
+        p.SetFormatter(fmt.ChoiceFormatter([2, 4, 8, 16, 32, 64, 128, 256]))
+        p.SetIndent(1)
+
         p = g.InsertProperty('date', 'date', wx.DateTime.Today())
         p.SetIndent(1)
         p.SetFormatter(fmt.DateFormatter())
@@ -272,7 +276,8 @@ class MainFrame(wx.Frame):
         p.SetIndent(1)
 
         p = g.InsertProperty('radiobox', 'radiobox', 1)
-        p.SetFormatter(fmt.EnumFormatter(choices))
+        #p.SetFormatter(fmt.EnumFormatter(choices))
+        p.SetFormatter(fmt.ChoiceFormatter({1:'1', 0:'0', 'Z':'Z', 'X':'X'}))
         p.SetControlStyle('radiobox')
         p.SetIndent(1)
 
