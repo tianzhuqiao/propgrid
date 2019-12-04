@@ -20,6 +20,8 @@
 #    WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #    ------------------------------------------------------------
 
+import sys
+import traceback
 import wx
 
 class BaseValidator(wx.Validator):
@@ -126,19 +128,24 @@ class BaseValidator(wx.Validator):
         Delegates actual writing to destination widget to subclass
         via _setControlValue method.
         """
-        if self.obj is None:
-            # Nothing to do
+        try:
+            if self.obj is None:
+                # Nothing to do
+                return True
+
+            # Copy object attribute value to widget
+            val = getattr(self.obj, self.attr)
+            if val is None:
+                val = ''
+            if self.formatter:
+                val = self.formatter.format(val)
+            self._setControlValue(val)
+
             return True
+        except:
+            traceback.print_exc(file=sys.stdout)
 
-        # Copy object attribute value to widget
-        val = getattr(self.obj, self.attr)
-        if val is None:
-            val = ''
-        if self.formatter:
-            val = self.formatter.format(val)
-        self._setControlValue(val)
-
-        return True
+        return False
 
 
     def TransferFromWindow(self):
@@ -150,25 +157,29 @@ class BaseValidator(wx.Validator):
 
         Only copies data if value is actually changed from attribute value.
         """
-        if self.obj is None:
-            # Nothing to do
-            return True
+        try:
+            if self.obj is None:
+                # Nothing to do
+                return True
 
-        # Get widget value
-        val = self._getControlValue()
+            # Get widget value
+            val = self._getControlValue()
 
-        # Check widget value against attribute value; only copy if changed
-        # Get object attribute value
-        old_val = getattr(self.obj, self.attr)
-        if self.formatter:
-            old_val = self.formatter.format(old_val)
-        if val != old_val:
+            # Check widget value against attribute value; only copy if changed
+            # Get object attribute value
+            old_val = getattr(self.obj, self.attr)
             if self.formatter:
-                val = self.formatter.coerce(val)
-            setattr(self.obj, self.attr, val)
+                old_val = self.formatter.format(old_val)
+            if val != old_val:
+                if self.formatter:
+                    val = self.formatter.coerce(val)
+                setattr(self.obj, self.attr, val)
 
-        return True
+            return True
+        except:
+            traceback.print_exc(file=sys.stdout)
 
+        return False
 
     def Validate(self, win):
         """
@@ -177,15 +188,18 @@ class BaseValidator(wx.Validator):
         Default behavior: Anything goes.
         """
         valid = True
-        val = self._getControlValue()
-        if self.required and val == '':
-            valid = False
-        if valid and self.formatter:
-            valid = self.formatter.validate(val)
-        if self.callback:
-            self.callback(self.obj, self.attr, val, self.required, valid)
-        return valid
+        try:
+            val = self._getControlValue()
+            if self.required and val == '':
+                valid = False
+            if valid and self.formatter:
+                valid = self.formatter.validate(val)
+            if self.callback:
+                self.callback(self.obj, self.attr, val, self.required, valid)
+        except:
+            traceback.print_exc(file=sys.stdout)
 
+        return valid
 
     def _setControlValue(self, value):
         """
@@ -223,12 +237,16 @@ class TextValidator(BaseValidator):
 
     def Validate(self, win):
         valid = super(TextValidator, self).Validate(win)
-        if not valid:
-            win.SetForegroundColour("red")
-            win.Refresh()
-        else:
-            win.SetForegroundColour(wx.NullColour)
-            win.Refresh()
+        try:
+            if not valid:
+                win.SetForegroundColour("red")
+                win.Refresh()
+            else:
+                win.SetForegroundColour(wx.NullColour)
+                win.Refresh()
+        except:
+            traceback.print_exc(file=sys.stdout)
+
         return valid
 
     def TransferToWindow(self):
