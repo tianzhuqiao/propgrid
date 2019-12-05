@@ -49,6 +49,8 @@ class Property(object):
         self.label_tip = ''
         self.value = value
         self.value_tip = ''
+        # indicate if data is garbage
+        self.value_valid = False
         # -1 to use the default one defined in parent's art provider
         self.title_width = -1
         self.indent = 0
@@ -242,7 +244,11 @@ class Property(object):
         if self.value != value:
             self.DestroyControl()
             fmt = self.formatter
-            if fmt and not fmt.validate(fmt.format(value)):
+            try:
+                if fmt and not fmt.validate(fmt.format(value)):
+                    return False
+            except:
+                traceback.print_exc(file=sys.stdout)
                 return False
             self.value = value
             if not silent:
@@ -256,9 +262,20 @@ class Property(object):
 
     def GetValueAsString(self):
         """get the value as string"""
-        if self.formatter:
-            return self.formatter.format(self.value)
+        try:
+            if self.formatter and self.GetValueValid():
+                # ignore format if data is not valid yet
+                return self.formatter.format(self.value)
+        except:
+            traceback.print_exc(file=sys.stdout)
+
         return str(self.value)
+
+    def SetValueValid(self, valid):
+        self.value_valid = valid
+
+    def GetValueValid(self):
+        return self.value_valid
 
     def SetValueTip(self, tip):
         """set the value tip"""
@@ -556,7 +573,7 @@ class Property(object):
                     style = self.controls.time
         win = None
         if style == self.controls.editbox:
-            style=wx.TE_PROCESS_ENTER
+            style = wx.TE_PROCESS_ENTER
             sz = self.GetMinSize()
             if sz.y > 50:
                 style = wx.TE_MULTILINE
@@ -594,7 +611,7 @@ class Property(object):
                 win.SetValidator(validator)
 
         elif style == self.controls.spin:
-            win = wx.SpinCtrl(self.grid, wx.ID_ANY, str(self.value),
+            win = wx.SpinCtrl(self.grid, wx.ID_ANY, value=str(self.value),
                               style=wx.SP_ARROW_KEYS)
             if self.formatter:
                 validator = SpinSliderValidator(self, 'value', self.formatter,
