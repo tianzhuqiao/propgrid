@@ -242,7 +242,7 @@ class IntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Signed or unsigned integer."""
     #re_validation = '^[-+]?[0-9]+$'
 
-    def __init__(self, min_val=None, max_val=None, **kwargs):
+    def __init__(self, min_val=0, max_val=2**31-1, **kwargs):
         super(IntFormatter, self).__init__(min_val, max_val, **kwargs)
 
         self.max_val = max_val
