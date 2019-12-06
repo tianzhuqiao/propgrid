@@ -50,7 +50,7 @@ class Property(object):
         self.value = value
         self.value_tip = ''
         # indicate if data is garbage
-        self.value_valid = False
+        self.value_valid = True
         # -1 to use the default one defined in parent's art provider
         self.title_width = -1
         self.indent = 0
