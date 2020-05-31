@@ -1,9 +1,9 @@
 import wx
 
-class PropArtNative(object):
 
+class PropArtNative(object):
     def __init__(self):
-        self.margin = {'top':0, 'bottom':0, 'left':0, 'right':0}
+        self.margin = {'top': 0, 'bottom': 0, 'left': 0, 'right': 0}
         self.gap_x = 2
         self.title_width = 150
         self.expansion_width = 12
@@ -13,10 +13,12 @@ class PropArtNative(object):
         self._font_value = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
         self.text_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT)
         self.text_clr_sel = wx.WHITE
-        self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+        self.text_clr_disabled = wx.SystemSettings.GetColour(
+            wx.SYS_COLOUR_GRAYTEXT)
         self.bg_clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW)
         self.bg_clr_sel = wx.SystemSettings.GetColour(wx.SYS_COLOUR_HIGHLIGHT)
-        self.bg_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
+        self.bg_clr_disabled = wx.SystemSettings.GetColour(
+            wx.SYS_COLOUR_3DFACE)
 
     def SetTitleWidth(self, width):
         """set the title width"""
@@ -57,7 +59,8 @@ class PropArtNative(object):
             self.text_clr_sel = wx.WHITE
         self.text_clr_disabled = clr_disabled
         if not self.text_clr_disabled:
-            self.text_clr_disabled = wx.SystemSettings.GetColour(wx.SYS_COLOUR_GRAYTEXT)
+            self.text_clr_disabled = wx.SystemSettings.GetColour(
+                wx.SYS_COLOUR_GRAYTEXT)
 
     def GetTextColor(self):
         """get the text colors"""
@@ -89,12 +92,12 @@ class PropArtNative(object):
         """calculate the rect for each section"""
         mx = self.gap_x
         irc = p.GetRect()
-        irc.SetLeft(irc.GetLeft()+self.margin['left'])
-        irc.SetRight(irc.GetRight()+self.margin['right'])
-        irc.SetTop(irc.GetTop()+self.margin['top'])
-        irc.SetBottom(irc.GetBottom()+self.margin['bottom'])
+        irc.SetLeft(irc.GetLeft() + self.margin['left'])
+        irc.SetRight(irc.GetRight() + self.margin['right'])
+        irc.SetTop(irc.GetTop() + self.margin['top'])
+        irc.SetBottom(irc.GetBottom() + self.margin['bottom'])
         x = irc.x
-        x = x + mx*2 + p.indent*self.indent_width
+        x = x + mx * 2 + p.indent * self.indent_width
 
         if self.expansion_width > 0 and p.HasChildren():
             # expander icon
@@ -106,7 +109,7 @@ class PropArtNative(object):
 
         # label
         p.regions['label'] = wx.Rect(*irc)
-        p.regions['label'].x = x + mx*2
+        p.regions['label'].x = x + mx * 2
 
         if not p.IsSeparator():
             title_width = p.title_width
@@ -123,11 +126,12 @@ class PropArtNative(object):
 
             rc = wx.Rect(*irc)
             rc.x = x
-            rc.SetWidth(irc.right-x)
+            rc.SetWidth(irc.right - x)
             p.regions['value'] = rc
         else:
             # separator does not have splitter & value
-            p.regions['label'].SetWidth(p.regions['label'].GetWidth() + irc.right-x)
+            p.regions['label'].SetWidth(p.regions['label'].GetWidth() +
+                                        irc.right - x)
             p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
             p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
 
@@ -136,9 +140,9 @@ class PropArtNative(object):
         rcs = p.regions['splitter']
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
         dc.DrawLine(rcs.left, rcs.top, rcs.left, rcs.bottom)
-        dc.DrawLine(rcs.right-1, rcs.top, rcs.right-1, rcs.bottom)
+        dc.DrawLine(rcs.right - 1, rcs.top, rcs.right - 1, rcs.bottom)
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rcs.left+1, rcs.top, rcs.left+1, rcs.bottom)
+        dc.DrawLine(rcs.left + 1, rcs.top, rcs.left + 1, rcs.bottom)
         dc.DrawLine(rcs.right, rcs.top, rcs.right, rcs.bottom)
 
     def DrawLabel(self, dc, p):
@@ -158,7 +162,7 @@ class PropArtNative(object):
         dc.SetClippingRegion(rc)
         (w, h) = dc.GetTextExtent(p.label)
 
-        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h)/2)
+        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h) / 2)
         p.show_label_tips = w > rc.width
         dc.DestroyClippingRegion()
 
@@ -207,7 +211,7 @@ class PropArtNative(object):
             value = p.GetValueAsString()
             (w, h) = dc.GetTextExtent(value)
             dc.SetClippingRegion(rc)
-            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h)/2)
+            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h) / 2)
             p.show_value_tips = rc.width < w
             dc.DestroyClippingRegion()
 
@@ -215,13 +219,14 @@ class PropArtNative(object):
         if self.expansion_width > 0 and p.HasChildren():
             w, h = self.expansion_width, self.expansion_width
             rc = p.regions['expander']
-            x = rc.x+(rc.width-w)/2
-            y = rc.y+(rc.height-h)/2+1
+            x = rc.x + (rc.width - w) / 2
+            y = rc.y + (rc.height - h) / 2 + 1
             dc.SetPen(wx.Pen(wx.BLACK))
             dc.SetBrush(wx.BLACK_BRUSH)
             render = wx.RendererNative.Get()
             if p.IsExpanded():
-                render.DrawTreeItemButton(p.grid, dc, (x, y, w, h), wx.CONTROL_EXPANDED)
+                render.DrawTreeItemButton(p.grid, dc, (x, y, w, h),
+                                          wx.CONTROL_EXPANDED)
             else:
                 render.DrawTreeItemButton(p.grid, dc, (x, y, w, h))
 
@@ -238,10 +243,10 @@ class PropArtNative(object):
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
         dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
         dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
-        dc.DrawLine(rc.right-1, rc.top, rc.right-1, rc.bottom)
+        dc.DrawLine(rc.right - 1, rc.top, rc.right - 1, rc.bottom)
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
         dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
+        dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
         dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
 
     def DrawBorder(self, dc, p):
@@ -253,7 +258,7 @@ class PropArtNative(object):
         dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
         dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left+1, rc.top, rc.left+1, rc.bottom)
+        dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
 
         # draw selected box
         if p.activated:

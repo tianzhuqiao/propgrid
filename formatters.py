@@ -19,8 +19,6 @@
 #    NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
 #    WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #    ------------------------------------------------------------
-
-
 """
 Formatters for converting and validating data values.
 """
@@ -28,6 +26,7 @@ Formatters for converting and validating data values.
 import os, sys, errno, copy, re
 import six
 import wx
+
 
 class Formatter(object):
     """
@@ -56,6 +55,7 @@ class Formatter(object):
         """Convert a string from the UI into a storable value."""
         return str_value
 
+
 class ChoiceFormatter(Formatter):
     """
     Formatter for choice data values.
@@ -76,8 +76,10 @@ class ChoiceFormatter(Formatter):
         """
         items = list(six.iteritems(self.mapping))
         if self.sort:
+
             def sort_by_label(item):
                 return item[1]
+
             key = None
             if self.sort == 'label':
                 key = sort_by_label
@@ -100,6 +102,7 @@ class ChoiceFormatter(Formatter):
         """Convert a string from the UI into a storable value."""
         return self.mapping_reverse[str_value]
 
+
 class EnumFormatter(Formatter):
     """
     Formatter for enumerated (EnumType) data values.
@@ -111,15 +114,16 @@ class EnumFormatter(Formatter):
         self.enumeration = enumeration
         self.sort = sort
 
-
     def validValues(self):
         """
         Return list of valid value (id,label) pairs.
         """
         items = copy.copy(self.enumeration.items())
         if self.sort:
+
             def sort_by_label(item):
                 return item[1]
+
             key = None
             if self.sort == 'label':
                 key = sort_by_label
@@ -134,11 +138,9 @@ class EnumFormatter(Formatter):
         vv = [s for i, s in self.validValues()]
         return str_value in vv
 
-
     def format(self, value):
         """Format a value for presentation in the UI."""
         return self.enumeration[value]
-
 
     def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
@@ -172,18 +174,22 @@ class FormatterMeta(type):
         # Indirect descendants don't automatically get one.
         if '__init__' not in newdict:
             if Formatter in bases:
+
                 def __init__(self, *args, **kwargs):
                     Formatter.__init__(self, *args, **kwargs)
                     initialize = getattr(self, 'initialize', None)
                     if initialize:
                         initialize(*args, **kwargs)
+
                 newdict['__init__'] = __init__
             else:
+
                 def __init__(self, *args, **kwargs):
                     super(self.__class__, self).__init__(*args, **kwargs)
                     initialize = getattr(self, 'initialize', None)
                     if initialize:
                         initialize(*args, **kwargs)
+
                 newdict['__init__'] = __init__
 
         # Generate validate-by-RE method if specified
@@ -191,9 +197,12 @@ class FormatterMeta(type):
         if re_validation:
             # Override validate method
             re_validation_flags = newdict.get('re_validation_flags', 0)
-            newdict['_re_validation'] = re.compile(re_validation, re_validation_flags)
+            newdict['_re_validation'] = re.compile(re_validation,
+                                                   re_validation_flags)
+
             def validate(self, str_value):
                 return self._re_validation.match(str_value) != None
+
             newdict['validate'] = validate
 
         # Delegate class creation to the expert
@@ -205,21 +214,26 @@ class ObjectIdFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     Object ID is assumed to be a large (32 bit?) unsigned integer.
     """
     re_validation = '^[0-9]+$'
+
     def coerce(self, str_value):
         if str_value:
             return int(str_value)
         return str_value
 
+
 class StringFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     pass
+
 
 class AlphaFormatter(StringFormatter):
     """Alphabetic characters only."""
     re_validation = '^[a-zA-Z]*$'
 
+
 class AlphaNumericFormatter(StringFormatter):
     """Alphanumeric characters only."""
     re_validation = '^[a-zA-Z0-9]*$'
+
 
 class EmailFormatter(StringFormatter):
     """Internet email addresses (more or less)."""
@@ -228,21 +242,24 @@ class EmailFormatter(StringFormatter):
     # Strangely enough, '/' is legal in email addresses.
     # However, I've never seen it used, so I prefer to leave it out.
     _re_subs = {
-            'sub1': r'[a-zA-Z~_-][a-zA-Z0-9_:~-]*',
-            'sub2': r'(\.[a-zA-Z0-9_:~-]+)*',
-            'sfx' : r'\.[a-zA-Z]{2,3}'
-        }
+        'sub1': r'[a-zA-Z~_-][a-zA-Z0-9_:~-]*',
+        'sub2': r'(\.[a-zA-Z0-9_:~-]+)*',
+        'sfx': r'\.[a-zA-Z]{2,3}'
+    }
     re_validation = '^%(sub1)s%(sub2)s[@]%(sub1)s%(sub2)s%(sfx)s$' % _re_subs
+
 
 class MoneyFormatter(StringFormatter):
     """Assumes decimal money, but doesn't assume currency."""
     re_validation = '^(([0-9]+([.][0-9]{2})?)|([0-9]*[.][0-9]{2}))$'
 
+
 class IntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Signed or unsigned integer."""
+
     #re_validation = '^[-+]?[0-9]+$'
 
-    def __init__(self, min_val=0, max_val=2**31-1, **kwargs):
+    def __init__(self, min_val=0, max_val=2**31 - 1, **kwargs):
         super(IntFormatter, self).__init__(min_val, max_val, **kwargs)
 
         self.max_val = max_val
@@ -264,21 +281,22 @@ class IntFormatter(six.with_metaclass(FormatterMeta, Formatter)):
             return int(str_value)
         return str_value
 
-class HexFormatter(IntFormatter):
 
+class HexFormatter(IntFormatter):
     def format(self, value):
         return hex(value)
 
     def coerce(self, str_value):
         return int(str_value, 16)
 
-class BinFormatter(IntFormatter):
 
+class BinFormatter(IntFormatter):
     def format(self, value):
         return bin(value)
 
     def coerce(self, str_value):
         return int(str_value, 2)
+
 
 class BoolFormatter(IntFormatter):
     def format(self, value):
@@ -290,25 +308,31 @@ class BoolFormatter(IntFormatter):
             return 1
         return 0
 
+
 class Int8Formatter(IntFormatter):
-    def __init__(self, min_val=-2**7, max_val=2**7-1, **kwargs):
+    def __init__(self, min_val=-2**7, max_val=2**7 - 1, **kwargs):
         super(Int8Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class Int16Formatter(IntFormatter):
-    def __init__(self, min_val=-2**15, max_val=2**15-1, **kwargs):
+    def __init__(self, min_val=-2**15, max_val=2**15 - 1, **kwargs):
         super(Int16Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class Int24Formatter(IntFormatter):
-    def __init__(self, min_val=-2**23, max_val=2**23-1, **kwargs):
+    def __init__(self, min_val=-2**23, max_val=2**23 - 1, **kwargs):
         super(Int24Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class Int32Formatter(IntFormatter):
-    def __init__(self, min_val=-2**31, max_val=2**31-1, **kwargs):
+    def __init__(self, min_val=-2**31, max_val=2**31 - 1, **kwargs):
         super(Int32Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class Int64Formatter(IntFormatter):
-    def __init__(self, min_val=-2**63, max_val=2**63-1, **kwargs):
+    def __init__(self, min_val=-2**63, max_val=2**63 - 1, **kwargs):
         super(Int64Formatter, self).__init__(min_val, max_val, **kwargs)
+
 
 class UIntFormatter(IntFormatter):
     """Unsigned integer."""
@@ -317,21 +341,26 @@ class UIntFormatter(IntFormatter):
 
         self.min_val = max(0, min_val)
 
+
 class UInt8Formatter(UIntFormatter):
-    def __init__(self, min_val=0, max_val=2**8-1, **kwargs):
+    def __init__(self, min_val=0, max_val=2**8 - 1, **kwargs):
         super(UInt8Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class UInt16Formatter(UIntFormatter):
-    def __init__(self, min_val=0, max_val=2**16-1, **kwargs):
+    def __init__(self, min_val=0, max_val=2**16 - 1, **kwargs):
         super(UInt16Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class UInt24Formatter(UIntFormatter):
-    def __init__(self, min_val=0, max_val=2**24-1, **kwargs):
+    def __init__(self, min_val=0, max_val=2**24 - 1, **kwargs):
         super(UInt24Formatter, self).__init__(min_val, max_val, **kwargs)
 
+
 class UInt32Formatter(UIntFormatter):
-    def __init__(self, min_val=0, max_val=2**32-1, **kwargs):
+    def __init__(self, min_val=0, max_val=2**32 - 1, **kwargs):
         super(UInt32Formatter, self).__init__(min_val, max_val, **kwargs)
+
 
 class FloatFormatter(Formatter):
     """Signed or unsigned floating-point number."""
@@ -357,14 +386,17 @@ class FloatFormatter(Formatter):
             return float(str_value)
         return str_value
 
+
 class DoubleFormatter(FloatFormatter):
     pass
+
 
 class UFloatFormatter(FloatFormatter):
     """Unsigned floating-point number."""
     def __init__(self, min_val=None, max_val=None, **kwargs):
         super(UFloatFormatter, self).__init__(min_val, max_val, **kwargs)
         self.min_val = max(0, min_val)
+
 
 class UDoubleFormatter(UFloatFormatter):
     pass
@@ -373,8 +405,10 @@ class UDoubleFormatter(UFloatFormatter):
 class TextFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     pass
 
+
 class PathFormatter(TextFormatter):
     ERROR_INVALID_NAME = 123
+
     def __init__(self, exist=False, types=None, **kwargs):
         super(PathFormatter, self).__init__(**kwargs)
         self.exist = exist
@@ -414,7 +448,8 @@ class PathFormatter(TextFormatter):
             # environment variable); else, the typical root directory.
             root_dirname = os.environ.get('HOMEDRIVE', 'C:') \
                 if sys.platform == 'win32' else os.path.sep
-            assert os.path.isdir(root_dirname)   # ...Murphy and her ironclad Law
+            assert os.path.isdir(
+                root_dirname)  # ...Murphy and her ironclad Law
 
             # Append a path separator to this directory if needed.
             root_dirname = root_dirname.rstrip(os.path.sep) + os.path.sep
@@ -489,9 +524,11 @@ class PathFormatter(TextFormatter):
         except OSError:
             return False
 
+
 class TimeElapsedFormatter(six.with_metaclass(FormatterMeta, Formatter)):
     """Elapsed time string (HH:MM:SS)."""
     re_validation = '^([1][0-2]|[0]?[0-9]):[0-5][0-9](:[0-5][0-9])?$'
+
 
 class DateFormatter(Formatter):
     """
@@ -505,7 +542,6 @@ class DateFormatter(Formatter):
     Leading zeros optional in month and day.
     Does not enforce # of days in month.
     """
-
     def __init__(self, fmt='%Y-%m-%d', **kwargs):
         super(DateFormatter, self).__init__(**kwargs)
         self.str_format = fmt
@@ -523,6 +559,7 @@ class DateFormatter(Formatter):
         value.ParseDate(str_value)
         return value
 
+
 class DateFormatterMDY(DateFormatter):
     """Alternate date string (MM-DD-YYYY).
 
@@ -535,6 +572,7 @@ class DateFormatterMDY(DateFormatter):
     """
     def __init__(self, fmt='%m-%d-%Y', **kwargs):
         super(DateFormatterMDY, self).__init__(fmt, **kwargs)
+
 
 class TimeFormatter(DateFormatter):
     """
@@ -558,6 +596,7 @@ class TimeFormatter(DateFormatter):
         value.ParseTime(str_value)
         return value
 
+
 class TimeFormatter12H(TimeFormatter):
     """
     Alternate time string (12-hour format, without seconds).
@@ -566,9 +605,9 @@ class TimeFormatter12H(TimeFormatter):
     Presentation format: HH:MM(aa) -- 12-hour format.
                          (aa may be 'am' or 'pm')
     """
-
     def __init__(self, fmt='%I:%M:%S %p', **kwargs):
         super(TimeFormatter12H, self).__init__(fmt, **kwargs)
+
 
 class DateTimeFormatter(DateFormatter):
     """
@@ -592,6 +631,7 @@ class DateTimeFormatter(DateFormatter):
         value.ParseDateTime(str_value)
         return value
 
+
 class ColorFormatter(Formatter):
     # Storage formate: wx.Colour
     # Presentation format HTML-like syntax: #xxxxxx.
@@ -614,6 +654,7 @@ class ColorFormatter(Formatter):
         except:
             return ""
 
+
 class FontFormatter(Formatter):
     # Storage formate: wx.Font
     def validate(self, str_value):
@@ -631,9 +672,11 @@ class FontFormatter(Formatter):
         font = wx.Font(str_value)
         return font
 
+
 if __name__ == '__main__':
 
     from .enumtype import EnumType
+
     def test(tests, fmt, msg):
         print(msg)
         failed, passed = 0, 0
@@ -642,10 +685,12 @@ if __name__ == '__main__':
             if actual == r:
                 passed += 1
             else:
-                print('failed test: {0}, expect {1}, returned {2}'.format(t, r, actual))
+                print('failed test: {0}, expect {1}, returned {2}'.format(
+                    t, r, actual))
                 failed += 1
-        print('\tPASS: %d tests'% passed)
-        print('\tFAIL: %d tests'% failed)
+        print('\tPASS: %d tests' % passed)
+        print('\tFAIL: %d tests' % failed)
+
     # ========== EnumFormatter ==========
     print('EnumFormatter')
     TestEnum = EnumType('A', 'B', 'C', D=3)
@@ -660,7 +705,8 @@ if __name__ == '__main__':
         passCount += 1
     else:
         failCount += 1
-        print('formatter.validValues() = %r -- WRONG -- expected %r' % (temp, expectedValidValues))
+        print('formatter.validValues() = %r -- WRONG -- expected %r' %
+              (temp, expectedValidValues))
 
     # formatter.format and formatter.coerce
     for id, name in TestEnum.items():
@@ -670,61 +716,59 @@ if __name__ == '__main__':
             passCount += 1
         else:
             failCount += 1
-            print('formatter.format(%d) = %r -- WRONG -- expected %r' % (id, temp, name))
+            print('formatter.format(%d) = %r -- WRONG -- expected %r' %
+                  (id, temp, name))
         # formatter.coerce
         temp = formatter.coerce(name)
         if temp == id:
             passCount += 1
         else:
             failCount += 1
-            print('formatter.coerce(%r) = %r -- WRONG -- expected %r' % (name, temp, id))
+            print('formatter.coerce(%r) = %r -- WRONG -- expected %r' %
+                  (name, temp, id))
     if failCount == 0:
         print('\tPASS (%d tests)' % passCount)
 
-
-    tests = [('a@b.com', True),
-             ('a@b', False),
-             ('@b', False),
-             ('@b.c', False),
-             ('@b.us', False),
-             ('a@b.us', True),
-             ('~joe_public-73@bozo.net', True),
-            ]
+    tests = [
+        ('a@b.com', True),
+        ('a@b', False),
+        ('@b', False),
+        ('@b.c', False),
+        ('@b.us', False),
+        ('a@b.us', True),
+        ('~joe_public-73@bozo.net', True),
+    ]
     test(tests, EmailFormatter(), 'EmailFormatter')
 
-    tests = [('10', True),
-             ('0', True),
-             ('100', True),
-             ('-1', False)]
+    tests = [('10', True), ('0', True), ('100', True), ('-1', False)]
     test(tests, IntFormatter(0, 100), 'IntFormatter')
     test(tests, UIntFormatter(-1, 100), 'UIntFormatter')
     test(tests, FloatFormatter(0, 100), 'FloatFormatter')
     test(tests, UFloatFormatter(0, 100), 'UFloatFormatter')
 
-    tests = [('0x0a', True),
-             ('0x00', True),
-             ('0x64', True),
-             ('-0x1', False)]
+    tests = [('0x0a', True), ('0x00', True), ('0x64', True), ('-0x1', False)]
     test(tests, HexFormatter(0, 100), 'HexFormatter')
 
-    tests = [('0b1010', True),
-             ('0b0', True),
-             ('0b1100100', True),
+    tests = [('0b1010', True), ('0b0', True), ('0b1100100', True),
              ('-0b1', False)]
     test(tests, BinFormatter(0, 100), 'BinFormatter')
 
-    tests = [('10', True),
-             ('0', True),
-             ('127', True),
-             ('128', False),
-             ('-1', True),
-             ('-128', True),
-             ('-129', False),]
+    tests = [
+        ('10', True),
+        ('0', True),
+        ('127', True),
+        ('128', False),
+        ('-1', True),
+        ('-128', True),
+        ('-129', False),
+    ]
     test(tests, Int8Formatter(), 'Int8Formatter')
-    tests = [('10', True),
-             ('0', True),
-             ('127', True),
-             ('255', True),
-             ('256', False),
-             ('-1', False),]
+    tests = [
+        ('10', True),
+        ('0', True),
+        ('127', True),
+        ('255', True),
+        ('256', False),
+        ('-1', False),
+    ]
     test(tests, UInt8Formatter(), 'UInt8Formatter')

@@ -38,10 +38,12 @@ EVT_PROP_REFRESH = wx.PyEventBinder(wxEVT_PROP_REFRESH, 1)
 EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 
+
 class Property(object):
-    controls = EnumType('default', 'none', 'editbox', 'choice', 'file', 'folder',
-                        'slider', 'spin', 'checkbox', 'radiobox', 'color', 'date',
-                        'time', 'font')
+    controls = EnumType('default', 'none', 'editbox', 'choice', 'file',
+                        'folder', 'slider', 'spin', 'checkbox', 'radiobox',
+                        'color', 'date', 'time', 'font')
+
     def __init__(self, grid, name, label, value):
         self.grid = grid
         self.name = name
@@ -70,8 +72,12 @@ class Property(object):
         self.min_size = wx.Size(200, 25)
         self.rect = wx.Rect(0, 0, 0, 0)
         # non-overlapping regions
-        self.regions = {'value':wx.Rect(), 'label':wx.Rect(),
-                        'splitter':wx.Rect(), 'expander':wx.Rect()}
+        self.regions = {
+            'value': wx.Rect(),
+            'label': wx.Rect(),
+            'splitter': wx.Rect(),
+            'expander': wx.Rect()
+        }
         self.show_label_tips = False
         self.show_value_tips = False
         self.separator = False
@@ -102,7 +108,8 @@ class Property(object):
         p.readonly = self.readonly
         p.ctrl_type = self.ctrl_type
         p.parent = self.parent
-        p.SetTextColor(self.text_clr, self.text_clr_sel, self.text_clr_disabled, True)
+        p.SetTextColor(self.text_clr, self.text_clr_sel,
+                       self.text_clr_disabled, True)
         p.SetBgColor(self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled, True)
         p.show_label_tips = self.show_label_tips
         p.show_value_tips = self.show_value_tips
@@ -235,7 +242,6 @@ class Property(object):
     def GetParent(self):
         """return the parent property"""
         return self.parent
-
 
     def SetValue(self, value, silent=False):
         """set the value"""
@@ -383,8 +389,10 @@ class Property(object):
         """return true if the property is readonly"""
         return self.readonly
 
-
-    def SetTextColor(self, clr=None, clr_sel=None, clr_disabled=None,
+    def SetTextColor(self,
+                     clr=None,
+                     clr_sel=None,
+                     clr_disabled=None,
                      silent=False):
         """
         set the text colors
@@ -403,7 +411,11 @@ class Property(object):
         """get the text colors"""
         return (self.text_clr, self.text_clr_sel, self.text_clr_disabled)
 
-    def SetBgColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=False):
+    def SetBgColor(self,
+                   clr=None,
+                   clr_sel=None,
+                   clr_disabled=None,
+                   silent=False):
         """
         set the background colors
 
@@ -473,12 +485,12 @@ class Property(object):
         """find the mouse position relative to the property"""
         # bottom edge
         rc = wx.Rect(*self.rect)
-        rc.SetTop(rc.bottom-2)
+        rc.SetTop(rc.bottom - 2)
         if rc.Contains(pt):
             return 'bottom_edge'
         # top edge
         rc = wx.Rect(*self.rect)
-        rc.SetBottom(rc.top+2)
+        rc.SetBottom(rc.top + 2)
         if rc.Contains(pt):
             return 'top_edge'
 
@@ -577,11 +589,13 @@ class Property(object):
             sz = self.GetMinSize()
             if sz.y > 50:
                 style = wx.TE_MULTILINE
-            win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
+            win = wx.TextCtrl(self.grid,
+                              wx.ID_ANY,
+                              self.GetValueAsString(),
                               style=style)
             if self.formatter:
-                validator = TextValidator(self, 'value', self.formatter,
-                                          False, None)
+                validator = TextValidator(self, 'value', self.formatter, False,
+                                          None)
                 win.SetValidator(validator)
 
             if style & wx.TE_PROCESS_ENTER:
@@ -603,7 +617,9 @@ class Property(object):
             win.Bind(wx.EVT_BUTTON, self.OnSelectFolder)
 
         elif style == self.controls.slider:
-            win = wx.Slider(self.grid, wx.ID_ANY, value=int(self.value),
+            win = wx.Slider(self.grid,
+                            wx.ID_ANY,
+                            value=int(self.value),
                             style=wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
             if self.formatter:
                 validator = SpinSliderValidator(self, 'value', self.formatter,
@@ -611,7 +627,9 @@ class Property(object):
                 win.SetValidator(validator)
 
         elif style == self.controls.spin:
-            win = wx.SpinCtrl(self.grid, wx.ID_ANY, value=str(self.value),
+            win = wx.SpinCtrl(self.grid,
+                              wx.ID_ANY,
+                              value=str(self.value),
                               style=wx.SP_ARROW_KEYS)
             if self.formatter:
                 validator = SpinSliderValidator(self, 'value', self.formatter,
@@ -636,9 +654,11 @@ class Property(object):
                 win.SetValidator(validator)
 
         elif style == self.controls.color:
-            win = wx.ColourPickerCtrl(self.grid, wx.ID_ANY, wx.BLACK,
-                                      style=wx.CLRP_DEFAULT_STYLE |
-                                      wx.CLRP_SHOW_LABEL)
+            win = wx.ColourPickerCtrl(self.grid,
+                                      wx.ID_ANY,
+                                      wx.BLACK,
+                                      style=wx.CLRP_DEFAULT_STYLE
+                                      | wx.CLRP_SHOW_LABEL)
             try:
                 win.SetColour(self.value)
             except ValueError:
@@ -694,14 +714,15 @@ class Property(object):
 
     def OnSelectFile(self, evt):
         style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        dlg = wx.FileDialog(self.grid, "Choose a file", self.GetValueAsString(),
-                            "", "*.*", style)
+        dlg = wx.FileDialog(self.grid, "Choose a file",
+                            self.GetValueAsString(), "", "*.*", style)
         if dlg.ShowModal() == wx.ID_OK:
             self.SetValue(dlg.GetPath())
         dlg.Destroy()
 
     def OnSelectFolder(self, evt):
-        dlg = wx.DirDialog(self.grid, "Choose input directory", self.GetValueAsString(),
+        dlg = wx.DirDialog(self.grid, "Choose input directory",
+                           self.GetValueAsString(),
                            wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
         if dlg.ShowModal() == wx.ID_OK:
             self.SetValue(dlg.GetPath())

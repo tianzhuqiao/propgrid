@@ -16,6 +16,7 @@
 
 import six
 
+
 class EnumType(object):
     """
     Enumerated-values class.
@@ -68,4 +69,3 @@ class EnumType(object):
             args = tuple(args)
             exc.args = args
             raise
-

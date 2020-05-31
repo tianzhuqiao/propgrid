@@ -15,6 +15,7 @@ wxEVT_PROP_DELETE = wx.NewEventType()
 EVT_PROP_INSERT = wx.PyEventBinder(wxEVT_PROP_INSERT, 1)
 EVT_PROP_DELETE = wx.PyEventBinder(wxEVT_PROP_DELETE, 1)
 
+
 def PopupMenu(wnd, menu):
     if not wnd or not menu:
         return
@@ -27,6 +28,7 @@ def PopupMenu(wnd, menu):
     command = cc.GetCommandId()
     wnd.PopEventHandler(True)
     return command
+
 
 class PropDropTarget(wx.DropTarget):
     def __init__(self, frame):
@@ -54,10 +56,11 @@ class PropDropTarget(wx.DropTarget):
         if rc.Contains(pt):
             (x, y) = self.frame.GetViewStart()
             if pt.y < 15:
-                self.frame.Scroll(-1, y-(15-pt.y)/3)
-            if pt.y > rc.bottom-15:
-                self.frame.Scroll(-1, y-(rc.bottom-15-pt.y)/3)
+                self.frame.Scroll(-1, y - (15 - pt.y) / 3)
+            if pt.y > rc.bottom - 15:
+                self.frame.Scroll(-1, y - (rc.bottom - 15 - pt.y) / 3)
         return super(PropDropTarget, self).OnDragOver(x, y, d)
+
 
 class PropGrid(wx.ScrolledWindow):
     ID_PROP_GRID_ADD_SEP = wx.NewId()
@@ -177,7 +180,11 @@ class PropGrid(wx.ScrolledWindow):
         p.SetParent(self)
         return self._InsertProperty(p, index, update)
 
-    def InsertSeparator(self, name='Separator', label='', index=-1, update=True):
+    def InsertSeparator(self,
+                        name='Separator',
+                        label='',
+                        index=-1,
+                        update=True):
         prop = self.InsertProperty(name, label, '', index, update)
         if prop:
             prop.SetSeparator(True)
@@ -213,7 +220,7 @@ class PropGrid(wx.ScrolledWindow):
         return False
 
     def DeleteAllProperties(self, update=True):
-        for i in range(len(self._props)-1, -1, -1):
+        for i in range(len(self._props) - 1, -1, -1):
             self.DeleteProperty(self._props[i], update)
 
     def DeleteProperty(self, prop, update=True):
@@ -262,7 +269,7 @@ class PropGrid(wx.ScrolledWindow):
     def GetScrolledRect(self, rc):
         (x, y) = self.GetViewStart()
         rcs = wx.Rect(*rc)
-        rcs.Offset(wx.Point(-x*self.SCROLL_UNIT, -y*self.SCROLL_UNIT))
+        rcs.Offset(wx.Point(-x * self.SCROLL_UNIT, -y * self.SCROLL_UNIT))
         return rcs
 
     def EnsureVisible(self, prop):
@@ -280,11 +287,11 @@ class PropGrid(wx.ScrolledWindow):
             return
         if rc.top > rc_prop.top:
             # if the prop is on top of the client window, scroll up
-            y = y + ((rc_prop.top - rc.top)/self.SCROLL_UNIT)
+            y = y + ((rc_prop.top - rc.top) / self.SCROLL_UNIT)
             self.Scroll(-1, y)
         elif rc.bottom < rc_prop.bottom:
             # if the prop is under bottom of the client window, scroll down
-            y = y + ((rc_prop.bottom-rc.bottom)/self.SCROLL_UNIT)
+            y = y + ((rc_prop.bottom - rc.bottom) / self.SCROLL_UNIT)
             self.Scroll(-1, y)
 
     def GetSelection(self):
@@ -344,7 +351,7 @@ class PropGrid(wx.ScrolledWindow):
         if prop.HasChildren() and (not prop.IsExpanded()):
             # move all the children if they are not visible
             indent = prop.GetIndent()
-            for i in six.moves.range(index+1, self.GetPropCount()):
+            for i in six.moves.range(index + 1, self.GetPropCount()):
                 if self._props[i].GetIndent() <= indent:
                     break
                 props.append(self._props[i])
@@ -355,7 +362,7 @@ class PropGrid(wx.ScrolledWindow):
                 self._props.append(p)
             else:
                 #insert it before index2
-                self._props.insert(index2+i, p)
+                self._props.insert(index2 + i, p)
                 i += 1
 
         if index2 != -1 and index > index2:
@@ -427,7 +434,7 @@ class PropGrid(wx.ScrolledWindow):
         """find the property under the mouse"""
         for i, prop in enumerate(self._props):
             prop = self._props[i]
-            if  not prop.IsVisible():
+            if not prop.IsVisible():
                 continue
             if prop.GetRect().Contains(pt):
                 return i
@@ -475,7 +482,7 @@ class PropGrid(wx.ScrolledWindow):
         """update the property status"""
         parent = None
         for i, prop in enumerate(self._props):
-            parent = self.GetProperty(i-1)
+            parent = self.GetProperty(i - 1)
             # find the direct parent property
             while parent:
                 if parent.GetIndent() < prop.GetIndent():
@@ -518,7 +525,8 @@ class PropGrid(wx.ScrolledWindow):
         menu.Check(self.ID_PROP_GRID_READ_ONLY, prop.IsReadonly())
 
         menu.AppendSeparator()
-        menu.Append(self.ID_PROP_GRID_INDENT_INS, "Increase Indent\tCtrl-Right")
+        menu.Append(self.ID_PROP_GRID_INDENT_INS,
+                    "Increase Indent\tCtrl-Right")
         menu.Append(self.ID_PROP_GRID_INDENT_DES, "Decrease Indent\tCtrl-Left")
         menu.AppendSeparator()
         menu.Append(self.ID_PROP_GRID_MOVE_UP, "Move up\tCtrl-Up")
@@ -536,8 +544,10 @@ class PropGrid(wx.ScrolledWindow):
             return False
 
         eid = evt.GetEventType()
-        if eid in [wxEVT_PROP_COLLAPSED, wxEVT_PROP_EXPANDED,
-                   wxEVT_PROP_INDENT, wxEVT_PROP_RESIZE]:
+        if eid in [
+                wxEVT_PROP_COLLAPSED, wxEVT_PROP_EXPANDED, wxEVT_PROP_INDENT,
+                wxEVT_PROP_RESIZE
+        ]:
             self.UpdateGrid()
         elif eid == wxEVT_PROP_RIGHT_CLICK:
             menu = self.GetContextMenu(evt.GetProperty())
@@ -561,9 +571,9 @@ class PropGrid(wx.ScrolledWindow):
                 # indent is changed, it may affect the previous prop.
                 self.UpdateGrid()
         elif eid == self.ID_PROP_GRID_INDENT_INS:
-            prop.SetIndent(prop.GetIndent()+1)
+            prop.SetIndent(prop.GetIndent() + 1)
         elif eid == self.ID_PROP_GRID_INDENT_DES:
-            prop.SetIndent(prop.GetIndent()-1)
+            prop.SetIndent(prop.GetIndent() - 1)
         elif eid == self.ID_PROP_GRID_MOVE_UP:
             self.MoveProperty(prop, -1)
         elif eid == self.ID_PROP_GRID_MOVE_DOWN:
@@ -583,7 +593,7 @@ class PropGrid(wx.ScrolledWindow):
             if keycode == wx.WXK_LEFT:
                 if evt.CmdDown():
                     # Ctrl + Left decrease the indent
-                    prop.SetIndent(indent-1)
+                    prop.SetIndent(indent - 1)
                 else:
                     # Left hide children
                     prop.SetExpand(False)
@@ -597,7 +607,7 @@ class PropGrid(wx.ScrolledWindow):
             elif keycode == wx.WXK_RIGHT:
                 if evt.CmdDown():
                     # Ctrl + Right increase the indent
-                    prop.SetIndent(indent+1)
+                    prop.SetIndent(indent + 1)
                 else:
                     # Right show children
                     prop.SetExpand(True)
@@ -681,7 +691,7 @@ class PropGrid(wx.ScrolledWindow):
             elif ht == 'top_edge':
                 # drag the bottom edge of the property above
                 if index > 0:
-                    index = index-1
+                    index = index - 1
                     self.prop_under_mouse = self.GetProperty(index)
                     self.resize_mode = self.RESIZE_BOT
             elif ht == 'label':
@@ -743,7 +753,7 @@ class PropGrid(wx.ScrolledWindow):
            PropGrid.drag_state == 1:
             pt = self.ClientToScreen(pt)
             start = PropGrid.drag_start
-            if (start.x-pt.x)**2+(start.y-pt.y)**2 > 10:
+            if (start.x - pt.x)**2 + (start.y - pt.y)**2 > 10:
                 if self.SendPropEvent(wxEVT_PROP_BEGIN_DRAG, self.drag_prop):
                     # the mouse is moved, so start drag & drop
                     PropGrid.drag_state = 2
@@ -778,7 +788,7 @@ class PropGrid(wx.ScrolledWindow):
                 # change the height for the property
                 sz = self.prop_under_mouse.GetMinSize()
                 sz2 = wx.Size(sz.x, sz.y)
-                sz.y += (pt.y- self.pos_mouse_down.y)
+                sz.y += (pt.y - self.pos_mouse_down.y)
                 sz.y = max(sz.y, 25)
                 if sz.y != sz2.y:
                     self.pos_mouse_down.x, self.pos_mouse_down.y = pt.x, pt.y
@@ -865,7 +875,8 @@ class PropGrid(wx.ScrolledWindow):
             # drop the property from the other window, copy it
             indent = PropGrid.drag_prop.GetIndent()
             self.CopyProperty(PropGrid.drag_prop, index2)
-            for i in six.moves.range(index+1, PropGrid.drag_pg.GetPropCount()):
+            for i in six.moves.range(index + 1,
+                                     PropGrid.drag_pg.GetPropCount()):
                 # copy all its children
                 child = PropGrid.drag_pg.GetProperty(i)
                 if child.GetIndent() <= indent:
@@ -880,9 +891,12 @@ class PropGrid(wx.ScrolledWindow):
             self.doMoveProperty(index, index2)
         self.UpdateGrid()
 
+
 class PropSettings(wx.Dialog):
     def __init__(self, parent, prop):
-        wx.Dialog.__init__(self, parent, title="Settings...",
+        wx.Dialog.__init__(self,
+                           parent,
+                           title="Settings...",
                            size=wx.Size(600, 460),
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
@@ -890,25 +904,31 @@ class PropSettings(wx.Dialog):
         self.propgrid.GetArtProvider().SetTitleWidth(200)
         self.prop = prop
         if prop.IsSeparator():
-            self.items = (('name', 'Name', '', 'editbox'),
-                          ('label', 'Label', '', 'editbox'),
+            self.items = (('name', 'Name', '', 'editbox'), ('label', 'Label',
+                                                            '', 'editbox'),
                           ('indent', 'Indent level', '', 'spin'),
                           ('font_label', 'Label font', '_font_label', 'font'),
                           ('font_value', 'Value font', '_font_value', 'font'))
         else:
-            self.items = (('name', 'Name', '', 'editbox'),
-                          ('label', 'Label', '', 'editbox'),
-                          ('indent', 'Indent level', '', 'spin'),
-                          ('enable', 'Enable', '', 'checkbox'),
-                          ('font_label', 'Label font', '_font_label', 'font'),
-                          ('font_value', 'Value font', '_font_value', 'font'),
-                          ('readonly', 'Read only', '', 'checkbox'),
-                          ('text_clr', 'Normal text color', 'text_clr', 'color'),
-                          ('text_clr_sel', 'Selected text color', 'text_clr_sel', 'color'),
-                          ('text_clr_disabled', 'Disable text color', 'text_clr_disabled', 'color'),
-                          ('bg_clr', 'Normal background color', 'bg_clr', 'color'),
-                          ('bg_clr_sel', 'Selected background color', 'bg_clr_sel', 'color'),
-                          ('bg_clr_disabled', 'Disabled background color', 'bg_clr_disabled', 'color'))
+            self.items = (('name', 'Name', '', 'editbox'), ('label', 'Label',
+                                                            '', 'editbox'),
+                          ('indent', 'Indent level', '',
+                           'spin'), ('enable', 'Enable', '', 'checkbox'),
+                          ('font_label', 'Label font', '_font_label',
+                           'font'), ('font_value', 'Value font', '_font_value',
+                                     'font'), ('readonly', 'Read only', '',
+                                               'checkbox'),
+                          ('text_clr', 'Normal text color', 'text_clr',
+                           'color'), ('text_clr_sel', 'Selected text color',
+                                      'text_clr_sel', 'color'),
+                          ('text_clr_disabled', 'Disable text color',
+                           'text_clr_disabled', 'color'),
+                          ('bg_clr', 'Normal background color', 'bg_clr',
+                           'color'), ('bg_clr_sel',
+                                      'Selected background color',
+                                      'bg_clr_sel', 'color'),
+                          ('bg_clr_disabled', 'Disabled background color',
+                           'bg_clr_disabled', 'color'))
 
         for (name, label, gname, ctrl) in self.items:
             pp = self.propgrid.InsertProperty(name, label, '')
@@ -928,7 +948,7 @@ class PropSettings(wx.Dialog):
                 pp.SetValue(v)
                 pp.SetBgColor(v, v, v)
                 t = wx.Colour(v)
-                t.SetRGB(t.GetRGB()^0xffffff)
+                t.SetRGB(t.GetRGB() ^ 0xffffff)
                 t = t.GetAsString(wx.C2S_HTML_SYNTAX)
                 pp.SetTextColor(t, t, t)
                 pp.SetFormatter(ColorFormatter())
@@ -951,7 +971,7 @@ class PropSettings(wx.Dialog):
         sz2 = wx.BoxSizer(wx.HORIZONTAL)
         sz2.Add(wx.Button(self, wx.ID_OK, u"&Ok"), 0, wx.ALL, 5)
         sz2.Add(wx.Button(self, wx.ID_CANCEL, u"&Cancel"), 0, wx.ALL, 5)
-        sz.Add(sz2, 0, wx.ALIGN_RIGHT|wx.RIGHT, 5)
+        sz.Add(sz2, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
 
         self.SetSizer(sz)
         self.Layout()
@@ -971,11 +991,12 @@ class PropSettings(wx.Dialog):
             t = wx.Colour(p.GetValue())
             c = t.GetAsString(wx.C2S_HTML_SYNTAX)
             p.SetBgColor(c, c, c)
-            t.SetRGB(t.GetRGB()^0xFFFFFF)
+            t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
             t = t.GetAsString(wx.C2S_HTML_SYNTAX)
             p.SetTextColor(t, t, t)
         elif 'font_' in p.GetName():
             p.SetValueFont(p.GetValue())
+
     def OnBtnOk(self, event):
         if self.propgrid.prop_selected:
             # update the value if necessary
@@ -988,5 +1009,6 @@ class PropSettings(wx.Dialog):
             if getattr(self.prop, name) is None:
                 setattr(self.prop, name, v.GetValue())
             else:
-                setattr(self.prop, name, type(getattr(self.prop, name))(v.GetValue()))
+                setattr(self.prop, name,
+                        type(getattr(self.prop, name))(v.GetValue()))
         event.Skip()

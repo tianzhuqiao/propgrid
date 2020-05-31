@@ -24,6 +24,7 @@ import sys
 import traceback
 import wx
 
+
 class BaseValidator(wx.Validator):
     """
     Base class for validators that validate *attributes* of
@@ -92,8 +93,12 @@ class BaseValidator(wx.Validator):
     integer-aware entry fields. The formatter handles
     validation and conversion of the input value.
     """
-
-    def __init__(self, obj, attr, formatter=None, required=True, callback=None):
+    def __init__(self,
+                 obj,
+                 attr,
+                 formatter=None,
+                 required=True,
+                 callback=None):
         super(BaseValidator, self).__init__()
 
         self.obj = obj
@@ -102,14 +107,12 @@ class BaseValidator(wx.Validator):
         self.formatter = formatter
         self.callback = callback
 
-
     def Clone(self):
         """
         Return a new validator for the same field of the same object.
         """
         return self.__class__(self.obj, self.attr, self.formatter,
                               self.required, self.callback)
-
 
     def SetObject(self, obj):
         """
@@ -119,7 +122,6 @@ class BaseValidator(wx.Validator):
         to edit a number of identical objects.
         """
         self.obj = obj
-
 
     def TransferToWindow(self):
         """
@@ -146,7 +148,6 @@ class BaseValidator(wx.Validator):
             traceback.print_exc(file=sys.stdout)
 
         return False
-
 
     def TransferFromWindow(self):
         """
@@ -209,7 +210,6 @@ class BaseValidator(wx.Validator):
         """
         raise NotImplementedError('Subclass must implement _setControlValue')
 
-
     def _getControlValue(self):
         """
         Return the value from the target control.
@@ -265,14 +265,12 @@ class TextValidator(BaseValidator):
         # Default behavior otherwise
         return super(TextValidator, self).TransferToWindow()
 
-
     def _setControlValue(self, value):
         """
         Set the value of the TextCtrl.
         """
         wgt = self.GetWindow()
         wgt.SetValue(value)
-
 
     def _getControlValue(self):
         """
@@ -290,8 +288,8 @@ class SelectorValidator(BaseValidator):
     """
     def __init__(self, obj, attr, formatter, *args, **kwargs):
         """ Standard constructor. """
-        super(SelectorValidator, self).__init__(obj, attr, formatter,
-                                                *args, **kwargs)
+        super(SelectorValidator, self).__init__(obj, attr, formatter, *args,
+                                                **kwargs)
 
     def _getFieldOptions(self, name):
         """
@@ -319,7 +317,6 @@ class SelectorValidator(BaseValidator):
         # Set selection
         wgt.SetStringSelection(value)
 
-
     def _getControlValue(self):
         """
         Return the value from the TextCtrl.
@@ -345,7 +342,6 @@ class CheckListBoxValidator(BaseValidator):
         """
         return self.formatter.validValues()
 
-
     def _setControlValue(self, value):
         """
         Set the value *and the options* of the control.
@@ -367,7 +363,6 @@ class CheckListBoxValidator(BaseValidator):
         # Set selection
         wgt._setControlSelections(value)
 
-
     def _getControlValue(self):
         """
         Return the value from the TextCtrl.
@@ -379,9 +374,7 @@ class CheckListBoxValidator(BaseValidator):
         value = [wgt.GetClientData(idx) for idx in selections]
         return value
 
-
     ########## END REQUIRED INTERFACE ##########
-
 
     def _setControlOptions(self, options):
         """
@@ -393,7 +386,6 @@ class CheckListBoxValidator(BaseValidator):
         wgt.Clear()
         for id, label in options:
             wgt.Append(label, id)
-
 
     def _setControlSelections(self, value):
         """
@@ -411,7 +403,7 @@ class CheckListBoxValidator(BaseValidator):
         if value is None:
             value = tuple()
         elif not isinstance(value, (list, tuple)):
-            value = (value,)
+            value = (value, )
 
         wgt = self.GetWindow()
         for idx in range(0, wgt.GetCount()):
@@ -448,6 +440,7 @@ class RadioBoxValidator(BaseValidator):
         wgt = self.GetWindow()
         return wgt.GetString(wgt.GetSelection())
 
+
 class SpinSliderValidator(BaseValidator):
     """
     Validator for wx.SpinCtrl and wx.Slider widgets.
@@ -455,8 +448,8 @@ class SpinSliderValidator(BaseValidator):
     """
     def __init__(self, obj, attr, formatter, *args, **kwargs):
         """ Standard constructor. """
-        super(SpinSliderValidator, self).__init__(obj, attr, formatter,
-                                                  *args, **kwargs)
+        super(SpinSliderValidator, self).__init__(obj, attr, formatter, *args,
+                                                  **kwargs)
 
     def _setControlValue(self, value):
         """
