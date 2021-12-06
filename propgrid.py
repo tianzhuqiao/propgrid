@@ -18,7 +18,7 @@ EVT_PROP_DELETE = wx.PyEventBinder(wxEVT_PROP_DELETE, 1)
 
 def PopupMenu(wnd, menu):
     if not wnd or not menu:
-        return
+        return wx.ID_NONE
 
     cc = aui.ToolbarCommandCapture()
     wnd.PushEventHandler(cc)
@@ -138,6 +138,7 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(EVT_PROP_DROP, self.OnPropEventsHandler)
         self.Bind(EVT_PROP_BEGIN_DRAG, self.OnPropEventsHandler)
         self.Bind(wx.EVT_MENU, self.OnProcessCommand)
+        self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
     def SetArtProvider(self, art):
         self._art = art
@@ -628,11 +629,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def OnPaint(self, event):
         """draw the property"""
-        if wx.Platform == '__WXMSW__':
-            dc = wx.BufferedPaintDC(self)
-        else:
-            dc = wx.GCDC(wx.PaintDC(self))
-
+        dc = wx.AutoBufferedPaintDC(self)
         self.DoPrepareDC(dc)
 
         rc = self.GetDrawRect()
