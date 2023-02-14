@@ -658,7 +658,7 @@ class Property(object):
                                       wx.ID_ANY,
                                       wx.BLACK,
                                       style=wx.CLRP_DEFAULT_STYLE
-                                      | wx.CLRP_SHOW_LABEL)
+                                      | wx.CLRP_SHOW_LABEL | wx.CLRP_SHOW_ALPHA)
             try:
                 win.SetColour(self.value)
             except ValueError:
@@ -738,11 +738,16 @@ class Property(object):
 
     def DestroyControl(self):
         """destroy the value setting control"""
+        def _destroy():
+            if self.window:
+                self.window.Show(False)
+                self.window.Destroy()
+                self.window = None
+                self.Resize()
+
         if self.window:
-            self.window.Show(False)
-            self.window.Destroy()
-            self.window = None
-            self.Resize()
+            # otherwise, it may crash (e..g, MacOS)
+            wx.CallAfter(_destroy)
             return True
         return False
 
