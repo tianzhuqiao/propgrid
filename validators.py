@@ -163,6 +163,9 @@ class BaseValidator(wx.Validator):
                 # Nothing to do
                 return True
 
+            if not self.Validate(self.GetWindow()):
+                return False
+
             # Get widget value
             val = self._getControlValue()
 
