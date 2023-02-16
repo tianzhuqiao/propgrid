@@ -161,8 +161,8 @@ class PropArtCustom(pa.PropArtNative):
 
 
 class MainFrame(wx.Frame):
-    ID_ART_NATIVE = wx.NewId()
-    ID_ART_DEFAULT = wx.NewId()
+    ID_ART_NATIVE = wx.NewIdRef()
+    ID_ART_DEFAULT = wx.NewIdRef()
 
     def __init__(self):
         wx.Frame.__init__(self, None, -1, 'PropGrid Demo', size=(800, 600))
@@ -196,63 +196,41 @@ class MainFrame(wx.Frame):
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
         # general
-        p = g.InsertSeparator('general', 'general')
+        g.InsertSeparator('general', 'general')
 
-        p = g.InsertProperty('string', 'string', 'hello world!')
-        p.SetIndent(1)
+        g.InsertProperty('string', 'string', 'hello world!').Indent(1)
 
-        p = g.InsertProperty('disable', 'disable', 'hello world!')
-        p.SetIndent(1)
-        p.Enable(False)
+        g.InsertProperty('disable', 'disable', 'hello world!').Indent(1).Enable(False)
 
-        p = g.InsertProperty('italic', 'italic', 'hello world!')
-        p.SetIndent(1)
-        p.SetValueFont(wx.Font(wx.NORMAL_FONT).Italic())
+        g.InsertProperty('italic', 'italic', 'hello world!').Indent(1)\
+                .ValueFont(wx.Font(wx.NORMAL_FONT).Italic())
 
-        p = g.InsertProperty('bold', 'bold', 'hello world!')
-        p.SetIndent(1)
-        p.SetValueFont(wx.Font(wx.NORMAL_FONT).Bold())
+        g.InsertProperty('bold', 'bold', 'hello world!').Indent(1)\
+             .ValueFont(wx.Font(wx.NORMAL_FONT).Bold())
 
-        p = g.InsertProperty('integer', 'integer', 42)
-        p.SetIndent(1)
-        p.SetFormatter(fmt.IntFormatter())
+        g.InsertProperty('integer', 'integer', 42).Indent(1).Formatter(fmt.IntFormatter())
 
-        p = g.InsertProperty('hex', 'hex', 42)
-        p.SetIndent(1)
-        p.SetFormatter(fmt.HexFormatter())
+        g.InsertProperty('hex', 'hex', 42).Indent(1).Formatter(fmt.HexFormatter())
 
-        p = g.InsertProperty('bin', 'bin', 42)
-        p.SetIndent(1)
-        p.SetFormatter(fmt.BinFormatter())
+        g.InsertProperty('bin', 'bin', 42).Indent(1).Formatter(fmt.BinFormatter())
 
-        p = g.InsertProperty('float', 'float', 42.0)
-        p.SetIndent(1)
-        p.SetFormatter(fmt.FloatFormatter())
+        g.InsertProperty('float', 'float', 42.0).Indent(1).Formatter(fmt.FloatFormatter())
 
-        p = g.InsertProperty('choice', 'choice', 2)
-        p.SetFormatter(fmt.ChoiceFormatter([2, 4, 8, 16, 32, 64, 128, 256]))
-        p.SetIndent(1)
+        g.InsertProperty('choice', 'choice', 2).Indent(1)\
+                .Formatter(fmt.ChoiceFormatter([2, 4, 8, 16, 32, 64, 128, 256]))
 
-        p = g.InsertProperty('date', 'date', wx.DateTime.Today())
-        p.SetIndent(1)
-        p.SetFormatter(fmt.DateFormatter())
+        g.InsertProperty('date', 'date', wx.DateTime.Today()).Indent(1).Formatter(fmt.DateFormatter())
 
-        p = g.InsertProperty('time', 'time', wx.DateTime.Now())
-        p.SetIndent(1)
-        p.SetFormatter(fmt.TimeFormatter())
+        g.InsertProperty('time', 'time', wx.DateTime.Now()).Indent(1).Formatter(fmt.TimeFormatter())
 
-        p = g.InsertProperty('datetime', 'datetime', wx.DateTime.Now())
-        p.SetIndent(1)
-        p.SetFormatter(fmt.DateTimeFormatter())
-        p.SetControlStyle('none')
+        g.InsertProperty('datetime', 'datetime', wx.DateTime.Now()).Indent(1)\
+            .Formatter(fmt.DateTimeFormatter()).ControlStyle('none')
 
         # control
-        p = g.InsertSeparator('type', 'type')
+        g.InsertSeparator('type', 'type')
 
-        p = g.InsertProperty('editbox', 'editbox', 'string')
-        p.SetIndent(1)
+        g.InsertProperty('editbox', 'editbox', 'string').Indent(1)
 
-        p = g.InsertProperty('choice', 'choice', 1)
         choices = enumtype.EnumType(Monday=1,
                                     Tuesday=2,
                                     Wednesday=3,
@@ -260,57 +238,36 @@ class MainFrame(wx.Frame):
                                     Friday=5,
                                     Saturday=6,
                                     Sunday=7)
-        p.SetFormatter(fmt.EnumFormatter(choices))
-        p.SetIndent(1)
+        g.InsertProperty('choice', 'choice', 1).Formatter(fmt.EnumFormatter(choices)).Indent(1)
 
-        p = g.InsertProperty('dir_dialog', 'folder', '/home')
-        #p.SetControlStyle('dir_dialog')
-        p.SetFormatter(fmt.PathFormatter(False, 'folder'))
-        p.SetIndent(1)
+        g.InsertProperty('dir_dialog', 'folder', '/home').Indent(1)\
+                .Formatter(fmt.PathFormatter(False, 'folder'))
 
-        p = g.InsertProperty('file_dialog', 'file', '/home/temp.txt')
-        #p.SetControlStyle('file_dialog')
-        p.SetFormatter(fmt.PathFormatter(False, 'file'))
-        p.SetIndent(1)
+        g.InsertProperty('file_dialog', 'file', '/home/temp.txt').Indent(1)\
+                .Formatter(fmt.PathFormatter(False, 'file'))
 
-        p = g.InsertProperty('slider', 'slider', 50)
-        p.SetControlStyle('slider')
-        p.SetFormatter(fmt.IntFormatter(1, 101))
-        p.SetIndent(1)
+        g.InsertProperty('slider', 'slider', 50).Indent(1).ControlStyle('slider')\
+                .Formatter(fmt.IntFormatter(1, 101))
 
-        p = g.InsertProperty('spin', 'spin', 50)
-        p.SetControlStyle('spin')
-        p.SetFormatter(fmt.IntFormatter(1, 100))
-        p.SetIndent(1)
+        g.InsertProperty('spin', 'spin', 50).Indent(1).ControlStyle('spin')\
+                .Formatter(fmt.IntFormatter(1, 100))
 
-        p = g.InsertProperty('checkbox', 'checkbox', 0)
-        p.SetControlStyle('checkbox')
-        p.SetFormatter(fmt.BoolFormatter())
-        p.SetIndent(1)
+        g.InsertProperty('checkbox', 'checkbox', 0).Indent(1).ControlStyle('checkbox')\
+                .Formatter(fmt.BoolFormatter())
 
-        p = g.InsertProperty('radiobox', 'radiobox', 1)
-        #p.SetFormatter(fmt.EnumFormatter(choices))
-        p.SetFormatter(
-            fmt.ChoiceFormatter({
-                1: '1',
-                0: '0',
-                'Z': 'Z',
-                'X': 'X'
-            }))
-        p.SetControlStyle('radiobox')
-        p.SetIndent(1)
+        g.InsertProperty('radiobox', 'radiobox', 1).Indent(1).ControlStyle('radiobox')\
+                .Formatter(fmt.ChoiceFormatter({
+                    1: '1',
+                    0: '0',
+                    'Z': 'Z',
+                    'X': 'X'
+                    }))
 
-        p = g.InsertProperty('date', 'date', wx.DateTime.Today())
-        p.SetIndent(1)
-        p.SetFormatter(fmt.DateFormatter())
+        g.InsertProperty('date', 'date', wx.DateTime.Today()).Indent(1).Formatter(fmt.DateFormatter())
 
-        p = g.InsertProperty('time', 'time', wx.DateTime.Now())
-        p.SetIndent(1)
-        p.SetFormatter(fmt.TimeFormatter())
+        g.InsertProperty('time', 'time', wx.DateTime.Now()).Indent(1).Formatter(fmt.TimeFormatter())
 
-        p = g.InsertProperty('font', 'font', wx.NORMAL_FONT)
-        p.SetIndent(1)
-        p.SetFormatter(fmt.FontFormatter())
+        g.InsertProperty('font', 'font', wx.NORMAL_FONT).Indent(1).Formatter(fmt.FontFormatter())
 
         # color
         self.clr_map = np.array(
@@ -328,15 +285,12 @@ class MainFrame(wx.Frame):
         chex = self.rgb2hex(self.clr_map[:, :-1])
         p = self.propgrid.InsertSeparator("color", "color")
         for i, c in enumerate(chex):
-            p = self.propgrid.InsertProperty("clr-%d" % i, '%d' % i,
-                                             wx.Colour(c))
-            p.SetBgColor(c, c, c)
-            p.SetFormatter(fmt.ColorFormatter())
             t = wx.Colour(c)
             t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
             t = t.GetAsString(wx.C2S_HTML_SYNTAX)
-            p.SetTextColor(t, t, t)
-            p.SetIndent(1)
+            self.propgrid.InsertProperty("clr-%d" % i, '%d' % i,
+                                             wx.Colour(c)).BgColor(c, c, c)\
+                .Formatter(fmt.ColorFormatter()).TextColor(t, t, t).Indent(1)
 
         pane_grid = aui.AuiPaneInfo().Name("propgrid").Caption("PropGrid").\
                     CenterPane()
@@ -395,9 +349,9 @@ class MainFrame(wx.Frame):
         eid = event.GetId()
         if eid == self.ID_ART_NATIVE:
             event.Check(
-                type(self.propgrid.GetArtProvider()) == pa.PropArtNative)
+                isinstance(self.propgrid.GetArtProvider(), pa.PropArtNative))
         elif eid == self.ID_ART_DEFAULT:
-            event.Check(type(self.propgrid.GetArtProvider()) == PropArtCustom)
+            event.Check(isinstance(self.propgrid.GetArtProvider(), PropArtCustom))
         else:
             event.Skip()
 

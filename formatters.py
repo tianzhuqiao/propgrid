@@ -665,7 +665,7 @@ class FontFormatter(Formatter):
         if isinstance(value, six.string_types):
             return value
         elif isinstance(value, wx.Font):
-            return value.GetNativeFontInfoDesc()
+            return value.GetNativeFontInfoUserDesc()
         return ""
 
     def coerce(self, str_value):

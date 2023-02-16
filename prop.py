@@ -84,6 +84,8 @@ class Property(object):
         self.data = None
         self.formatter = None
 
+        self.top_value_border = False
+        self.bottom_value_border = False
     def duplicate(self):
         """
         copy the object
@@ -118,6 +120,10 @@ class Property(object):
         p.formatter = copy.copy(p.formatter)
         return p
 
+    def Grid(self, grid):
+        self.SetGrid(grid)
+        return self
+
     def SetGrid(self, grid):
         """set the grid window"""
         self.grid = grid
@@ -126,11 +132,19 @@ class Property(object):
         """return the grid window"""
         return self.grid
 
+    def Data(self, data):
+        self.SetData(data)
+        return self
+
     def SetData(self, data):
         self.data = data
 
     def GetData(self):
         return self.data
+
+    def Separator(self, sep=True, silent=False):
+        self.SetSeparator(sep, silent)
+        return self
 
     def SetSeparator(self, sep=True, silent=False):
         """set the property to be a separator"""
@@ -143,6 +157,10 @@ class Property(object):
     def IsSeparator(self):
         """return true if the property is a separator"""
         return self.separator
+
+    def ControlStyle(self, style):
+        self.SetControlStyle(style)
+        return self
 
     def SetControlStyle(self, style):
         """set the control type
@@ -164,14 +182,19 @@ class Property(object):
     def Enable(self, enable=True, silent=False):
         """enable/disable the property"""
         if self.enable == enable:
-            return
+            return self
         self.enable = enable
         if not silent:
             self.Refresh()
+        return self
 
     def IsEnabled(self):
         """return true if the property is enabled"""
         return self.enable
+
+    def Name(self, name, silent=False):
+        self.SetName(name, silent)
+        return self
 
     def SetName(self, name, silent=False):
         """set the name"""
@@ -185,6 +208,10 @@ class Property(object):
         """get the name"""
         return self.name
 
+    def Label(self, label, silent=False):
+        self.SetLabel(label, silent)
+        return self
+
     def SetLabel(self, label, silent=False):
         """set the label"""
         if self.label == label:
@@ -197,6 +224,10 @@ class Property(object):
         """get the label"""
         return self.label
 
+    def LabelTip(self, tip):
+        self.SetLabelTip(tip)
+        return self
+
     def SetLabelTip(self, tip):
         """set the label tip"""
         self.label_tip = tip
@@ -207,6 +238,10 @@ class Property(object):
             return self.label_tip
         return self.GetName()
 
+    def LabelFont(self, font, silent=False):
+        self.SetLabelFont(font, silent)
+        return self
+
     def SetLabelFont(self, font, silent=False):
         """set label font"""
         self.font_label = font
@@ -216,6 +251,15 @@ class Property(object):
     def GetLabelFont(self):
         """get label font"""
         return self.font_label
+
+    def Visible(self, visible, silent=True):
+        """
+        show/hide the property
+
+        The property may be hidden if its parent is in collapsed mode.
+        """
+        self.SetVisible(visible, silent)
+        return self
 
     def SetVisible(self, visible=True, silent=False):
         """
@@ -233,6 +277,11 @@ class Property(object):
         """return true if the property is visible"""
         return self.visible
 
+    def Parent(self, prop):
+        """set the parent property"""
+        self.SetParent(prop)
+        return self
+
     def SetParent(self, prop):
         """set the parent property"""
         if prop and prop.GetIndent() >= self.GetIndent():
@@ -242,6 +291,11 @@ class Property(object):
     def GetParent(self):
         """return the parent property"""
         return self.parent
+
+    def Value(self, value, silent=True):
+        """set the value"""
+        self.SetValue(value, silent)
+        return self
 
     def SetValue(self, value, silent=False):
         """set the value"""
@@ -277,11 +331,23 @@ class Property(object):
 
         return str(self.value)
 
+    def ValueValid(self, valid):
+        """mark the value valid"""
+        self.SetValueValid(valid)
+        return self
+
     def SetValueValid(self, valid):
+        """mark the value valid"""
         self.value_valid = valid
 
     def GetValueValid(self):
+        """return if the value is valid"""
         return self.value_valid
+
+    def ValueTip(self, tip):
+        """set the value tip"""
+        self.SetValueTip(tip)
+        return self
 
     def SetValueTip(self, tip):
         """set the value tip"""
@@ -293,6 +359,11 @@ class Property(object):
             return self.value_tip
         return self.GetValueAsString()
 
+    def ValueFont(self, font, silent=True):
+        """set value font"""
+        self.SetValueFont(font, silent)
+        return self
+
     def SetValueFont(self, font, silent=False):
         """set value font"""
         self.font_value = font
@@ -303,19 +374,30 @@ class Property(object):
         """get value font"""
         return self.font_value
 
+    def Formatter(self, formatter):
+        """set value formatter"""
+        self.SetFormatter(formatter)
+        return self
+
     def SetFormatter(self, formatter):
+        """set value formatter"""
         if not formatter or not hasattr(formatter, 'validate') or\
            not hasattr(formatter, 'format') or not hasattr(formatter, 'coerce'):
             formatter = None
         self.formatter = formatter
 
     def GetFormatter(self):
+        """get value formatter"""
         return self.formatter
+
+    def Indent(self, indent, silent=True):
+        """set the indent to a positive integer"""
+        self.SetIndent(indent, silent)
+        return self
 
     def SetIndent(self, indent, silent=False):
         """set the indent to a positive integer"""
-        if indent < 0:
-            indent = 0
+        indent = max(indent, 0)
         if indent == self.indent:
             return
         self.indent = indent
@@ -325,6 +407,11 @@ class Property(object):
     def GetIndent(self):
         """get the indent"""
         return self.indent
+
+    def Expand(self, expand=True, silent=True):
+        """expand/collapse the children"""
+        self.SetExpand(expand, silent)
+        return self
 
     def SetExpand(self, expand=True, silent=False):
         """expand/collapse the children"""
@@ -346,6 +433,11 @@ class Property(object):
         """return true if the expand/collapse button is expanded"""
         return self.expanded
 
+    def Children(self, haschildren, silent=True):
+        """Indicate that the property has children"""
+        self.SetHasChildren(haschildren, silent)
+        return self
+
     def SetHasChildren(self, haschildren, silent=False):
         """Indicate that the property has children"""
         if haschildren == self.has_children:
@@ -363,6 +455,11 @@ class Property(object):
         """return true if the property has children"""
         return self.has_children
 
+    def Activated(self, activated=True):
+        """activate the property"""
+        self.SetActivated(activated)
+        return self
+
     def SetActivated(self, activated=True):
         """activate the property"""
         if activated == self.activated:
@@ -378,6 +475,11 @@ class Property(object):
         """return true if the property is activated"""
         return self.activated
 
+    def Readyonly(self, readonly=True, silent=True):
+        """set the property to readonly"""
+        self.SetReadonly(readonly, silent)
+        return self
+
     def SetReadonly(self, readonly=True, silent=False):
         """set the property to readonly"""
         if readonly != self.IsReadonly():
@@ -388,6 +490,16 @@ class Property(object):
     def IsReadonly(self):
         """return true if the property is readonly"""
         return self.readonly
+
+    def TextColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=True):
+        """
+        set the text colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        self.SetTextColor(clr, clr_sel, clr_disabled, silent)
+        return self
 
     def SetTextColor(self,
                      clr=None,
@@ -411,6 +523,16 @@ class Property(object):
         """get the text colors"""
         return (self.text_clr, self.text_clr_sel, self.text_clr_disabled)
 
+    def BgColor(self, clr=None, clr_sel=None, clr_disabled=None, silent=True):
+        """
+        set the background colors
+
+        All values are string. If the value is None, the color will reset to
+        default.
+        """
+        self.SetBgColor(clr, clr_sel, clr_disabled, silent)
+        return self
+
     def SetBgColor(self,
                    clr=None,
                    clr_sel=None,
@@ -433,6 +555,11 @@ class Property(object):
         """get the background colors"""
         return (self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled)
 
+    def TitleWidth(self, width):
+        """set the title width"""
+        self.SetTitleWidth(width)
+        return self
+
     def SetTitleWidth(self, width):
         """set the title width"""
         self.title_width = width
@@ -440,6 +567,11 @@ class Property(object):
     def GetTitleWidth(self):
         """return the width"""
         return self.title_width
+
+    def Rect(self, rc):
+        """set the prop rect"""
+        self.SetRect(rc)
+        return self
 
     def SetRect(self, rc):
         """set the prop rect"""
@@ -453,6 +585,11 @@ class Property(object):
         """return the prop rect"""
         return wx.Rect(*self.rect)
 
+    def MinSize(self, size, silent=True):
+        """set the min size"""
+        self.SetMinSize(size, silent)
+        return self
+
     def SetMinSize(self, size, silent=False):
         """set the min size"""
         if self.min_size != size:
@@ -465,7 +602,7 @@ class Property(object):
         if self.window:
             size = self.window.GetSize()
             sz = self.min_size
-            size.y = max(sz.y, size.y)
+            size.y = max(sz.y, size.y+2)
             return size
         return wx.Size(*self.min_size)
 
@@ -506,7 +643,7 @@ class Property(object):
         if self.HasChildren() and ht == 'expander':
             self.SetExpand(not self.expanded)
 
-        if ht == 'value':
+        if self.IsEnabled() and ht == 'value':
             if not self.IsReadonly() and self.IsActivated():
                 self.CreateControl()
         else:
@@ -560,13 +697,12 @@ class Property(object):
 
     def CreateControl(self):
         """create the control"""
-        if self.window != None or self.IsSeparator():
+        if self.window is not None or self.IsSeparator():
             return
         style = self.ctrl_type
         if style == self.controls.default:
             style = self.controls.editbox
-            if isinstance(self.formatter, EnumFormatter) or \
-               isinstance(self.formatter, ChoiceFormatter):
+            if isinstance(self.formatter, (EnumFormatter, ChoiceFormatter)):
                 style = self.controls.choice
             elif isinstance(self.formatter, BoolFormatter):
                 style = self.controls.checkbox
@@ -757,8 +893,7 @@ class Property(object):
             return False
         validator = self.window.GetValidator()
         if validator:
-            validator.TransferFromWindow()
-            return
+            return validator.TransferFromWindow()
 
         value_old = self.value
         value = None

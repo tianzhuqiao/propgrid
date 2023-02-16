@@ -106,6 +106,8 @@ class PropArtNative(object):
             rc.SetWidth(self.expansion_width)
             p.regions['expander'] = rc
             x = rc.right
+        else:
+            p.regions['expander'] = wx.Rect(irc.right, irc.top, 0, 0)
 
         # label
         p.regions['label'] = wx.Rect(*irc)
@@ -130,8 +132,6 @@ class PropArtNative(object):
             p.regions['value'] = rc
         else:
             # separator does not have splitter & value
-            p.regions['label'].SetWidth(p.regions['label'].GetWidth() +
-                                        irc.right - x)
             p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
             p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
 
@@ -240,26 +240,52 @@ class PropArtNative(object):
         dc.SetBrush(brush)
         dc.DrawRectangle(rc.x, rc.y, rc.width, rc.height)
 
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
-        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
-        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
-        dc.DrawLine(rc.right - 1, rc.top, rc.right - 1, rc.bottom)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
-        dc.DrawLine(rc.right, rc.top, rc.right, rc.bottom)
-
     def DrawBorder(self, dc, p):
+        def _draw_line(rc, top=True, bot=True):
+            # top & bottom border
+            if bot:
+                crbg = self.bg_clr
+                if p.IsEnabled() and not p.IsReadonly():
+                    crbg = self.bg_clr_disabled
+                else:
+                    crbg = self.bg_clr
+                dc.SetPen(wx.Pen(wx.Colour(crbg)))
+                dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+
+                clr = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)
+                dc.SetPen(wx.Pen(clr))
+                #dc.SetPen(wx.Pen(wx.RED))
+                dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+            #dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
+            if top:
+                dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
+                dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
+            #dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
+
         rc = p.GetRect()
+        rcs = p.regions['splitter']
+        if rcs.width > 0:
+            rc.right = rcs.left
+            _draw_line(rc)
+            rc = p.GetRect()
+            rc.left = rcs.right
+            if p.top_value_border:
+                _draw_line(rc, top=p.top_value_border, bot=p.bottom_value_border)
+            if not p.bottom_value_border:
+                crbg = p.bg_clr
+                if p.IsEnabled() and not p.IsReadonly():
+                    crbg = p.bg_clr_disabled
+                    if not crbg:
+                        crbg = self.bg_clr_disabled
+                else:
+                    crbg = p.bg_clr
+                    if not crbg:
+                        crbg = self.bg_clr
 
-        # top & bottom border
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DSHADOW)))
-        dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
-        dc.DrawLine(rc.left, rc.top, rc.left, rc.bottom)
-        dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
-        dc.DrawLine(rc.left, rc.top, rc.right, rc.top)
-        dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
-
+                dc.SetPen(wx.Pen(wx.Colour(crbg)))
+                dc.DrawLine(rc.left, rc.bottom, rc.right, rc.bottom)
+        else:
+            _draw_line(rc)
         # draw selected box
         if p.activated:
             dc.SetPen(wx.Pen(wx.BLACK, 1, wx.PENSTYLE_DOT))
@@ -272,6 +298,7 @@ class PropArtNative(object):
             return
 
         dc.SetBackgroundMode(wx.TRANSPARENT)
+        dc.DestroyClippingRegion()
 
         self.PrepareDrawRect(p)
 
@@ -279,10 +306,10 @@ class PropArtNative(object):
 
         self.DrawExpansion(dc, p)
         self.DrawLabel(dc, p)
-
         # separator does not have radio button, splitter bar and value sections
         if not p.IsSeparator():
-            self.DrawSplitter(dc, p)
             self.DrawValue(dc, p)
 
         self.DrawBorder(dc, p)
+        if not p.IsSeparator():
+            self.DrawSplitter(dc, p)

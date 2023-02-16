@@ -4,7 +4,7 @@ import json
 import six
 import wx
 import wx.py.dispatcher as dp
-import wx.lib.agw.aui as aui
+from wx.lib.agw import aui
 from .prop import *
 from .formatters import *
 from .propart import PropArtNative
@@ -467,6 +467,23 @@ class PropGrid(wx.ScrolledWindow):
                 # let art provider update drawing regions (e.g., value rect)
                 self._art.PrepareDrawRect(p)
                 y += h
+        prev_prop = None
+        for p in self._props:
+            if not  p.IsVisible():
+                continue
+            p.top_value_border = False
+            if prev_prop is None or prev_prop.IsSeparator() or p.IsSeparator():
+                p.top_value_border = True
+            prev_prop = p
+
+        next_prop = None
+        for p in reversed(self._props):
+            if not  p.IsVisible():
+                continue
+            p.bottom_value_border = False
+            if next_prop is None or next_prop.IsSeparator() or p.IsSeparator():
+                p.bottom_value_border = True
+            next_prop = p
 
     def GetDrawRect(self):
         """return the drawing rect"""
