@@ -207,6 +207,7 @@ class MainFrame(wx.Frame):
 
         g.InsertProperty('bold', 'bold', 'hello world!').Indent(1)\
              .ValueFont(wx.Font(wx.NORMAL_FONT).Bold())
+        g.InsertProperty('not_draggable', 'not draggable', 'hello world!').Indent(1).Draggable(False)
 
         g.InsertProperty('integer', 'integer', 42).Indent(1).Formatter(fmt.IntFormatter())
 
@@ -292,8 +293,7 @@ class MainFrame(wx.Frame):
                                              wx.Colour(c)).BgColor(c, c, c)\
                 .Formatter(fmt.ColorFormatter()).TextColor(t, t, t).Indent(1)
 
-        pane_grid = aui.AuiPaneInfo().Name("propgrid").Caption("PropGrid").\
-                    CenterPane()
+        pane_grid = aui.AuiPaneInfo().Name("propgrid").Caption("PropGrid").CenterPane()
         self._mgr.AddPane(self.propgrid, pane_grid)
         ns = {}
         ns['wx'] = wx

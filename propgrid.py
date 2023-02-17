@@ -109,6 +109,7 @@ class PropGrid(wx.ScrolledWindow):
         self.SetVirtualSize(wx.Size(100, 200))
 
         self.SetDropTarget(PropDropTarget(self))
+        self.draggable = True
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -146,6 +147,19 @@ class PropGrid(wx.ScrolledWindow):
 
     def GetArtProvider(self):
         return self._art
+
+    def Draggable(self, draggable):
+        """set if it is allow to drag/drop any prop"""
+        self.SetDraggable(draggable)
+        return self
+
+    def SetDraggable(self, draggable):
+        """set if it is allow to drag/drop any prop"""
+        self.draggable = draggable
+
+    def IsDraggable(self):
+        """get if it is allow to drag/drop any prop"""
+        return self.draggable
 
     def AppendProperty(self, name, label="", value="", update=True):
         return self.InsertProperty(name, label, value, -1, update)
@@ -710,9 +724,10 @@ class PropGrid(wx.ScrolledWindow):
                     self.resize_mode = self.RESIZE_BOT
             elif ht == 'label':
                 # start drag & drop
-                PropGrid.drag_start = self.ClientToScreen(pt)
-                PropGrid.drag_prop = prop
-                PropGrid.drag_state = 1
+                if self.IsDraggable() and prop.IsDraggable():
+                    PropGrid.drag_start = self.ClientToScreen(pt)
+                    PropGrid.drag_prop = prop
+                    PropGrid.drag_state = 1
         # activate the property under mouse
         self.SetSelection(index)
         evt.Skip()

@@ -84,8 +84,10 @@ class Property(object):
         self.data = None
         self.formatter = None
 
+        self.draggable = True
         self.top_value_border = False
         self.bottom_value_border = False
+
     def duplicate(self):
         """
         copy the object
@@ -617,6 +619,19 @@ class Property(object):
     def GetShowValueTips(self):
         """return whether value tooltip is allowed"""
         return self.show_value_tips
+
+    def Draggable(self, draggable):
+        """set if it is allow to drag/drop the prop"""
+        self.SetDraggable(draggable)
+        return self
+
+    def SetDraggable(self, draggable):
+        """set if it is allow to drag/drop the prop"""
+        self.draggable = draggable
+
+    def IsDraggable(self):
+        """get if it is allow to drag/drop the prop"""
+        return self.draggable
 
     def HitTest(self, pt):
         """find the mouse position relative to the property"""
