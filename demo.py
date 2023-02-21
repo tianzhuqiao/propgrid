@@ -349,7 +349,7 @@ class MainFrame(wx.Frame):
         eid = event.GetId()
         if eid == self.ID_ART_NATIVE:
             event.Check(
-                isinstance(self.propgrid.GetArtProvider(), pa.PropArtNative))
+                not isinstance(self.propgrid.GetArtProvider(), PropArtCustom))
         elif eid == self.ID_ART_DEFAULT:
             event.Check(isinstance(self.propgrid.GetArtProvider(), PropArtCustom))
         else:
