@@ -99,32 +99,15 @@ class PropBase():
         copy.deepcopy does not work since the object contains pointer to wx
         objects
         """
-        p = type(self)
-        p.grid = self.grid
-        p.name = self.name
-        p.label = self.label
-        p.value = self.value
-        p.label_tip = self.label_tip
-        p.value_tip = self.value_tip
-        p.title_width = self.title_width
-        p.indent = self.indent
-        p.activated = self.activated
-        p.enable = self.enable
+        p = copy.deepcopy(self)
+        p.grid = None
         if self.font_label:
             p.font_label = wx.Font(self.font_label)
         if self.font_value:
             p.font_value = wx.Font(self.font_value)
-        p.has_children = self.has_children
-        p.expanded = self.expanded
-        p.visible = self.visible
-        p.readonly = self.readonly
-        p.parent = self.parent
         p.SetTextColor(self.text_clr, self.text_clr_sel,
                        self.text_clr_disabled, True)
         p.SetBgColor(self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled, True)
-        p.show_label_tips = self.show_label_tips
-        p.show_value_tips = self.show_value_tips
-        p.separator = self.separator
         p.data = self.data
         if self.formatter:
             p.formatter = copy.copy(self.formatter)
@@ -1274,14 +1257,10 @@ class PropFont(PropControl):
             self.SetValue(dlg.GetFontData().GetChosenFont())
         return None
 
-    def doGetValueFromWin(self):
-        if self.window is None:
-            return None
-        font = self.window.GetSelectedFont()
-        value = font.GetNativeFontInfoDesc()
-        return value
-
     def SetValue(self, value, silent=False):
+        if isinstance(value, wx.Font):
+            value = value.GetNativeFontInfoDesc()
+
         if super().SetValue(value, True):
             if self.auto_apply:
                 # set the font for value
@@ -1325,6 +1304,8 @@ class PropColor(PropControl):
         return None
 
     def SetValue(self, value, silent=False):
+        if isinstance(value, wx.Colour):
+            value = value.GetAsString(wx.C2S_HTML_SYNTAX)
         if super().SetValue(value, True):
             if self.auto_apply:
                 t = wx.Colour(self.GetValue())
@@ -1336,10 +1317,3 @@ class PropColor(PropControl):
 
             if not silent:
                 self.Refresh()
-
-    def doGetValueFromWin(self):
-        if self.window is None:
-            return None
-        clr = self.window.GetColour()
-        value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
-        return value
