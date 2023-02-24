@@ -113,7 +113,7 @@ class PropArtNative(object):
         p.regions['label'] = wx.Rect(*irc)
         p.regions['label'].x = x + mx * 2
 
-        if not p.IsSeparator():
+        if 'value' in p.regions:
             title_width = p.title_width
             if title_width < 0:
                 title_width = self.title_width
@@ -131,9 +131,10 @@ class PropArtNative(object):
             rc.SetWidth(irc.right - x)
             p.regions['value'] = rc
         else:
+            pass
             # separator does not have splitter & value
-            p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
-            p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
+            #p.regions['splitter'] = wx.Rect(irc.right, irc.top, 0, 0)
+            #p.regions['value'] = wx.Rect(irc.right, irc.top, 0, 0)
 
     def DrawSplitter(self, dc, p):
         # draw splitter
@@ -175,7 +176,8 @@ class PropArtNative(object):
         dc.SetFont(font)
 
         p.show_value_tips = False
-        if p.window is None:
+
+        if p.draws.get('value', False):
             crbg = p.bg_clr
             crtxt = wx.BLACK
             if not p.IsEnabled() or p.IsReadonly():
@@ -263,8 +265,8 @@ class PropArtNative(object):
             #dc.DrawLine(rc.left + 1, rc.top, rc.left + 1, rc.bottom)
 
         rc = p.GetRect()
-        rcs = p.regions['splitter']
-        if rcs.width > 0:
+        rcs = p.regions.get('splitter', None)
+        if rcs is not None and rcs.width > 0:
             rc.right = rcs.left
             _draw_line(rc)
             rc = p.GetRect()
@@ -307,9 +309,9 @@ class PropArtNative(object):
         self.DrawExpansion(dc, p)
         self.DrawLabel(dc, p)
         # separator does not have radio button, splitter bar and value sections
-        if not p.IsSeparator():
+        if 'value' in p.regions:
             self.DrawValue(dc, p)
 
         self.DrawBorder(dc, p)
-        if not p.IsSeparator():
+        if 'value' in p.regions:
             self.DrawSplitter(dc, p)

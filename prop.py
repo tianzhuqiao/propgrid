@@ -6,7 +6,9 @@ import wx
 import wx.adv
 from .validators import *
 from .formatters import *
+from . import formatters as fmt
 from .enumtype import EnumType
+from .utility import PopupMenu
 
 wxEVT_PROP_SELECTED = wx.NewEventType()
 wxEVT_PROP_CHANGING = wx.NewEventType()
@@ -39,17 +41,13 @@ EVT_PROP_DROP = wx.PyEventBinder(wxEVT_PROP_DROP, 1)
 EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 
 
-class Property(object):
-    controls = EnumType('default', 'none', 'editbox', 'choice', 'file',
-                        'folder', 'slider', 'spin', 'checkbox', 'radiobox',
-                        'color', 'date', 'time', 'font')
-
-    def __init__(self, grid, name, label, value):
-        self.grid = grid
-        self.name = name
+class PropBase():
+    def __init__(self, label=''):
+        self.grid = None
+        self.name = ''
         self.label = label
         self.label_tip = ''
-        self.value = value
+        self.value = ''
         self.value_tip = ''
         # indicate if data is garbage
         self.value_valid = True
@@ -64,8 +62,7 @@ class Property(object):
         self.expanded = True
         self.visible = True
         self.readonly = False
-        self.ctrl_type = self.controls.default
-        self.window = None
+        #self.window = None
         self.parent = -1
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
@@ -78,6 +75,12 @@ class Property(object):
             'splitter': wx.Rect(),
             'expander': wx.Rect()
         }
+        self.draws = {
+            'value': True,
+            'label': True,
+            'splitter': True,
+            'expander': True
+            }
         self.show_label_tips = False
         self.show_value_tips = False
         self.separator = False
@@ -85,6 +88,7 @@ class Property(object):
         self.formatter = None
 
         self.draggable = True
+        self.configurable = True
         self.top_value_border = False
         self.bottom_value_border = False
 
@@ -95,22 +99,25 @@ class Property(object):
         copy.deepcopy does not work since the object contains pointer to wx
         objects
         """
-        p = Property(self.grid, self.name, self.label, self.value)
+        p = type(self)
+        p.grid = self.grid
+        p.name = self.name
+        p.label = self.label
+        p.value = self.value
         p.label_tip = self.label_tip
         p.value_tip = self.value_tip
         p.title_width = self.title_width
         p.indent = self.indent
         p.activated = self.activated
         p.enable = self.enable
-        if p.font_label:
-            self.font_label = wx.Font(p.font_label)
-        if p.font_value:
-            self.font_value = wx.Font(p.font_value)
+        if self.font_label:
+            p.font_label = wx.Font(self.font_label)
+        if self.font_value:
+            p.font_value = wx.Font(self.font_value)
         p.has_children = self.has_children
         p.expanded = self.expanded
         p.visible = self.visible
         p.readonly = self.readonly
-        p.ctrl_type = self.ctrl_type
         p.parent = self.parent
         p.SetTextColor(self.text_clr, self.text_clr_sel,
                        self.text_clr_disabled, True)
@@ -119,7 +126,8 @@ class Property(object):
         p.show_value_tips = self.show_value_tips
         p.separator = self.separator
         p.data = self.data
-        p.formatter = copy.copy(p.formatter)
+        if self.formatter:
+            p.formatter = copy.copy(self.formatter)
         return p
 
     def Grid(self, grid):
@@ -144,7 +152,7 @@ class Property(object):
     def GetData(self):
         return self.data
 
-    def Separator(self, sep=True, silent=False):
+    def Separator(self, sep=True, silent=True):
         self.SetSeparator(sep, silent)
         return self
 
@@ -160,28 +168,7 @@ class Property(object):
         """return true if the property is a separator"""
         return self.separator
 
-    def ControlStyle(self, style):
-        self.SetControlStyle(style)
-        return self
-
-    def SetControlStyle(self, style):
-        """set the control type
-        style: default | none | editbox | choice | file | folder | slider |
-               spin | checkbox | radiobox | color | date | time
-        """
-        self.UpdatePropValue()
-        self.DestroyControl()
-        if style not in self.controls:
-            print('Unsupported control style!')
-            return False
-        self.ctrl_type = self.controls[style]
-        return True
-
-    def GetControlStyle(self):
-        """return the control type"""
-        return self.ctrl_type
-
-    def Enable(self, enable=True, silent=False):
+    def Enable(self, enable=True, silent=True):
         """enable/disable the property"""
         if self.enable == enable:
             return self
@@ -194,7 +181,7 @@ class Property(object):
         """return true if the property is enabled"""
         return self.enable
 
-    def Name(self, name, silent=False):
+    def Name(self, name, silent=True):
         self.SetName(name, silent)
         return self
 
@@ -210,7 +197,7 @@ class Property(object):
         """get the name"""
         return self.name
 
-    def Label(self, label, silent=False):
+    def Label(self, label, silent=True):
         self.SetLabel(label, silent)
         return self
 
@@ -219,6 +206,8 @@ class Property(object):
         if self.label == label:
             return
         self.label = label
+        if not self.name:
+            self.SetName(f'_prop_{label}', silent=True)
         if not silent:
             self.Refresh()
 
@@ -304,7 +293,6 @@ class Property(object):
         if self.IsReadonly():
             return False
         if self.value != value:
-            self.DestroyControl()
             fmt = self.formatter
             try:
                 if fmt and not fmt.validate(fmt.format(value)):
@@ -467,10 +455,7 @@ class Property(object):
         if activated == self.activated:
             return
         self.activated = activated
-        if not activated:
-            # destroy the control if the property is inactivated
-            self.OnTextEnter()
-        else:
+        if activated:
             self.SendPropEvent(wxEVT_PROP_SELECTED)
 
     def IsActivated(self):
@@ -581,7 +566,6 @@ class Property(object):
             self.rect = wx.Rect(*rc)
             # redraw the item
             self.Refresh()
-            wx.CallAfter(self.LayoutControl)
 
     def GetRect(self):
         """return the prop rect"""
@@ -601,11 +585,6 @@ class Property(object):
 
     def GetMinSize(self):
         """return the min size"""
-        if self.window:
-            size = self.window.GetSize()
-            sz = self.min_size
-            size.y = max(sz.y, size.y+2)
-            return size
         return wx.Size(*self.min_size)
 
     def GetSize(self):
@@ -633,6 +612,19 @@ class Property(object):
         """get if it is allow to drag/drop the prop"""
         return self.draggable
 
+    def Configurable(self, configurable):
+        """set if it is allow to configure the prop"""
+        self.SetConfigurable(configurable)
+        return self
+
+    def SetConfigurable(self, configurable):
+        """set if it is allow to configure the prop"""
+        self.configurable = configurable
+
+    def IsConfigurable(self):
+        """get if it is allow to configure the prop"""
+        return self.configurable
+
     def HitTest(self, pt):
         """find the mouse position relative to the property"""
         # bottom edge
@@ -658,13 +650,6 @@ class Property(object):
         if self.HasChildren() and ht == 'expander':
             self.SetExpand(not self.expanded)
 
-        if self.IsEnabled() and ht == 'value':
-            if not self.IsReadonly() and self.IsActivated():
-                self.CreateControl()
-        else:
-            self.UpdatePropValue()
-            self.DestroyControl()
-
         return ht
 
     def OnMouseUp(self, pt):
@@ -675,13 +660,6 @@ class Property(object):
         ht = self.HitTest(pt)
 
         if self.IsEnabled():
-            if ht == 'value':
-                if not self.IsReadonly():
-                    self.CreateControl()
-            else:
-                self.UpdatePropValue()
-                self.DestroyControl()
-
             if ht == 'expander':
                 self.SetExpand(not self.expanded)
 
@@ -694,9 +672,6 @@ class Property(object):
 
         if self.IsEnabled():
             # destroy the control when the mouse moves out
-            if ht is None:
-                self.UpdatePropValue()
-                self.DestroyControl()
             self.SendPropEvent(wxEVT_PROP_RIGHT_CLICK)
 
         return ht
@@ -705,274 +680,10 @@ class Property(object):
         ht = self.HitTest(pt)
         return ht
 
-    def OnTextEnter(self):
-        self.UpdatePropValue()
-        self.DestroyControl()
-        self.Refresh()
-
-    def CreateControl(self):
-        """create the control"""
-        if self.window is not None or self.IsSeparator():
-            return
-        style = self.ctrl_type
-        if style == self.controls.default:
-            style = self.controls.editbox
-            if isinstance(self.formatter, (EnumFormatter, ChoiceFormatter)):
-                style = self.controls.choice
-            elif isinstance(self.formatter, BoolFormatter):
-                style = self.controls.checkbox
-            elif isinstance(self.formatter, PathFormatter):
-                if self.formatter.types == 'file':
-                    style = self.controls.file
-                elif self.formatter.types == 'folder':
-                    style = self.controls.folder
-            elif isinstance(self.formatter, ColorFormatter):
-                style = self.controls.color
-            elif isinstance(self.formatter, FontFormatter):
-                style = self.controls.font
-            elif isinstance(self.formatter, DateFormatter):
-                style = self.controls.date
-                if isinstance(self.formatter, TimeFormatter):
-                    style = self.controls.time
-        win = None
-        if style == self.controls.editbox:
-            style = wx.TE_PROCESS_ENTER
-            sz = self.GetMinSize()
-            if sz.y > 50:
-                style = wx.TE_MULTILINE
-            win = wx.TextCtrl(self.grid,
-                              wx.ID_ANY,
-                              self.GetValueAsString(),
-                              style=style)
-            if self.formatter:
-                validator = TextValidator(self, 'value', self.formatter, False,
-                                          None)
-                win.SetValidator(validator)
-
-            if style & wx.TE_PROCESS_ENTER:
-                win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
-
-        elif style == self.controls.choice:
-            win = wx.Choice(self.grid, wx.ID_ANY)
-            if self.formatter:
-                validator = SelectorValidator(self, 'value', self.formatter,
-                                              True)
-                win.SetValidator(validator)
-
-        elif style == self.controls.file:
-            win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
-            win.Bind(wx.EVT_BUTTON, self.OnSelectFile)
-
-        elif style == self.controls.folder:
-            win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
-            win.Bind(wx.EVT_BUTTON, self.OnSelectFolder)
-
-        elif style == self.controls.slider:
-            win = wx.Slider(self.grid,
-                            wx.ID_ANY,
-                            value=int(self.value),
-                            style=wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
-            if self.formatter:
-                validator = SpinSliderValidator(self, 'value', self.formatter,
-                                                True)
-                win.SetValidator(validator)
-
-        elif style == self.controls.spin:
-            win = wx.SpinCtrl(self.grid,
-                              wx.ID_ANY,
-                              value=str(self.value),
-                              style=wx.SP_ARROW_KEYS)
-            if self.formatter:
-                validator = SpinSliderValidator(self, 'value', self.formatter,
-                                                True)
-                win.SetValidator(validator)
-
-        elif style == self.controls.checkbox:
-            win = wx.CheckBox(self.grid, wx.ID_ANY)
-            win.SetValue(int(self.value) != 0)
-
-        elif style == self.controls.radiobox:
-            choices = []
-            if self.formatter and hasattr(self.formatter, 'validValues'):
-                choices = [x[1] for x in self.formatter.validValues()]
-
-            win = wx.RadioBox(self.grid, wx.ID_ANY, "", wx.DefaultPosition,
-                              wx.DefaultSize, choices, 5, wx.RA_SPECIFY_COLS)
-
-            if self.formatter:
-                validator = RadioBoxValidator(self, 'value', self.formatter,
-                                              True)
-                win.SetValidator(validator)
-
-        elif style == self.controls.color:
-            win = wx.ColourPickerCtrl(self.grid,
-                                      wx.ID_ANY,
-                                      wx.BLACK,
-                                      style=wx.CLRP_DEFAULT_STYLE
-                                      | wx.CLRP_SHOW_LABEL | wx.CLRP_SHOW_ALPHA)
-            try:
-                win.SetColour(self.value)
-            except ValueError:
-                pass
-        elif style == self.controls.font:
-            win = wx.FontPickerCtrl(self.grid, wx.ID_ANY)
-            try:
-                if self.value:
-                    win.SetSelectedFont(self.value)
-            except ValueError:
-                pass
-
-        elif style == self.controls.date:
-            win = wx.adv.DatePickerCtrl(self.grid, wx.ID_ANY)
-            try:
-                win.SetValue(self.value)
-            except ValueError:
-                pass
-
-        elif style == self.controls.time:
-            win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
-            try:
-                win.SetValue(self.value)
-            except ValueError:
-                pass
-        if win:
-            if win.GetValidator():
-                win.GetValidator().TransferToWindow()
-            self.window = win
-            # the window size may be larger than the value rect, notify parent
-            # grid to update it
-            self.Resize()
-            self.LayoutControl()
-            self.window.SetFocus()
-            self.window.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
-
-    def OnPropTextEnter(self, evt):
-        """send when the enter key is pressed in the property control window"""
-        if self.window:
-            self.OnTextEnter()
-
-    def OnKillFocus(self, evt):
-        # destroy the control if it loses focus. Wait until the event has been
-        # processed; otherwise, it may crash.
-        evt.Skip()
-        wnd = evt.GetWindow()
-        while wnd:
-            if wnd.GetParent() == self.window:
-                return
-            wnd = wnd.GetParent()
-        # color window does not work on Mac
-        #wx.CallAfter(self.OnTextEnter)
-
-    def OnSelectFile(self, evt):
-        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
-        dlg = wx.FileDialog(self.grid, "Choose a file",
-                            self.GetValueAsString(), "", "*.*", style)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.SetValue(dlg.GetPath())
-        dlg.Destroy()
-
-    def OnSelectFolder(self, evt):
-        dlg = wx.DirDialog(self.grid, "Choose input directory",
-                           self.GetValueAsString(),
-                           wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.SetValue(dlg.GetPath())
-        dlg.Destroy()
-
-    def LayoutControl(self):
-        """re-positioning the control"""
-        if self.window is None:
-            return
-        rc = self.grid.GetScrolledRect(wx.Rect(*self.regions['value']))
-        self.window.SetSize(rc.GetSize())
-        self.window.Move(rc.GetTopLeft())
-
-    def DestroyControl(self):
-        """destroy the value setting control"""
-        def _destroy():
-            if self.window:
-                self.window.Show(False)
-                self.window.Destroy()
-                self.window = None
-                self.Resize()
-
-        if self.window:
-            # otherwise, it may crash (e..g, MacOS)
-            wx.CallAfter(_destroy)
-            return True
-        return False
-
-    def UpdatePropValue(self):
-        """update the value"""
-        if self.window is None:
-            return False
-        validator = self.window.GetValidator()
-        if validator:
-            return validator.TransferFromWindow()
-
-        value_old = self.value
-        value = None
-        if isinstance(self.window, wx.TextCtrl):
-            value = self.window.GetValue()
-
-        elif isinstance(self.window, wx.Button):
-            value = self.window.GetLabel()
-
-        elif isinstance(self.window, wx.RadioBox) or\
-             isinstance(self.window, wx.Choice):
-            sel = self.window.GetSelection()
-            if sel >= 0 and sel < self.window.GetCount():
-                value = self.window.GetString(sel)
-
-        elif isinstance(self.window, wx.Slider):
-            value = self.window.GetValue()
-
-        elif isinstance(self.window, wx.SpinCtrl):
-            value = self.window.GetValue()
-
-        elif isinstance(self.window, wx.CheckBox):
-            value = self.window.GetValue()
-
-        elif isinstance(self.window, wx.ColourPickerCtrl):
-            clr = self.window.GetColour()
-            value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
-
-        elif isinstance(self.window, wx.FontPickerCtrl):
-            font = self.window.GetSelectedFont()
-            value = font.GetNativeFontInfoDesc()
-
-        elif isinstance(self.window, wx.adv.DatePickerCtrl) or\
-             isinstance(self.window, wx.adv.TimePickerCtrl):
-            value = self.window.GetValue()
-            if self.formatter:
-                value = self.formatter.format(value)
-        try:
-            if self.formatter:
-                if self.formatter.validate(str(value)):
-                    value = self.formatter.coerce(str(value))
-                else:
-                    return False
-            elif self.value is not None:
-                value = type(self.value)(value)
-            self.SetValue(value, silent=True)
-        except ValueError:
-            traceback.print_exc(file=sys.stdout)
-            return False
-
-        if self.SendPropEvent(wxEVT_PROP_CHANGING):
-            self.SendPropEvent(wxEVT_PROP_CHANGED)
-            self.Refresh()
-            return True
-        else:
-            #the parent rejects the operation, restore the original value
-            self.SetValue(value_old)
-            return False
-
     def SendPropEvent(self, event):
         """ send property grid event to parent"""
         win = self.GetGrid()
-        evt = PropertyEvent(event)
-        evt.SetProperty(self)
+        evt = PropertyEvent(event, self)
         evt.SetEventObject(win)
         evt_handler = win.GetEventHandler()
 
@@ -989,21 +700,23 @@ class Property(object):
         if self.IsVisible() or force:
             self.SendPropEvent(wxEVT_PROP_REFRESH)
 
+    def PostRefresh(self):
+        pass
 
 class PropertyEvent(wx.PyCommandEvent):
-    def __init__(self, commandType, id=0):
+    def __init__(self, commandType, prop, id=0):
         wx.PyCommandEvent.__init__(self, commandType, id)
-        self.prop = None
+        self.prop = prop
         self.veto = False
 
-    def GetProperty(self):
+    def Get(self):
         """return the attached Property"""
         return self.prop
 
-    def SetProperty(self, prop):
+    def Set(self, prop):
         """attach the Property instance"""
-        if isinstance(prop, Property):
-            self.prop = prop
+        assert isinstance(prop, PropBase)
+        self.prop = prop
 
     def Veto(self, veto=True):
         """refuse the event"""
@@ -1012,3 +725,621 @@ class PropertyEvent(wx.PyCommandEvent):
     def GetVeto(self):
         """return whether the event is refused"""
         return self.veto
+
+class PropControl(PropBase):
+    def __init__(self, *args, **kwargs):
+        PropBase.__init__(self, *args, **kwargs)
+        self.window = None
+        self.allow_editing = True
+
+    def Editing(self, enable):
+        self.SetEditting(enable)
+        return self
+
+    def SetEditting(self, enable):
+        self.allow_editing = enable
+
+    def GetEditting(self):
+        return self.allow_editing
+
+    def SetValue(self, value, silent=False):
+        self.DestroyControl()
+        return super().SetValue(value, silent)
+
+    def SetActivated(self, activated=True):
+        """activate the property"""
+        super().SetActivated(activated)
+        if not activated:
+            # destroy the control if the property is inactivated
+            self.OnTextEnter()
+
+    def SetRect(self, rc):
+        """set the prop rect"""
+        if self.rect != rc:
+            wx.CallAfter(self.LayoutControl)
+        super().SetRect(rc)
+
+    def doCreateControl(self):
+        return None
+
+    def CreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return
+        if not self.allow_editing:
+            return
+        win = self.doCreateControl()
+
+        if win is not None:
+            if win.GetValidator():
+                win.GetValidator().TransferToWindow()
+            self.window = win
+            # the window size may be larger than the value rect, notify parent
+            # grid to update it
+            self.Resize()
+            self.LayoutControl()
+            self.window.SetFocus()
+            #self.window.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
+            self.draws['value'] = False
+
+    def OnMouseDown(self, pt):
+        ht = super().OnMouseDown(pt)
+
+        if self.IsEnabled() and ht == 'value':
+            if not self.IsReadonly() and self.IsActivated():
+                self.CreateControl()
+        else:
+            self.UpdatePropValue()
+            self.DestroyControl()
+
+        return ht
+
+    def OnMouseDoubleClick(self, pt):
+        ht = self.HitTest(pt)
+
+        if self.IsEnabled():
+            if ht == 'value':
+                if not self.IsReadonly():
+                    self.CreateControl()
+            else:
+                self.UpdatePropValue()
+                self.DestroyControl()
+
+        return  super().OnMouseDoubleClick(pt)
+
+    def OnMouseRightClick(self, pt):
+        ht = self.HitTest(pt)
+
+        if self.IsEnabled():
+            # destroy the control when the mouse moves out
+            if ht is None:
+                self.UpdatePropValue()
+                self.DestroyControl()
+
+        return super().OnMouseRightClick(pt)
+
+    def OnTextEnter(self):
+        self.UpdatePropValue()
+        self.DestroyControl()
+        self.Refresh()
+
+    def OnPropTextEnter(self, evt):
+        """send when the enter key is pressed in the property control window"""
+        if self.window:
+            self.OnTextEnter()
+
+    def DestroyControl(self):
+        """destroy the value setting control"""
+        def _destroy():
+            if self.window:
+                self.window.Show(False)
+                self.window.Destroy()
+                self.window = None
+                self.Resize()
+
+        if self.window:
+            self.draws['value'] = True
+            # otherwise, it may crash (e..g, MacOS)
+            wx.CallAfter(_destroy)
+            return True
+        return False
+
+    def doGetValueFromWin(self):
+        return None
+
+    def UpdatePropValue(self):
+        """update the value"""
+        if self.window is None:
+            return False
+        old_value = self.value
+        validator = self.window.GetValidator()
+        if validator:
+            validator.TransferFromWindow()
+        else:
+            value = self.doGetValueFromWin()
+            if value is not None:
+                value = self.coerce(value)
+            if value is not None:
+                self.SetValue(value, silent=True)
+        if old_value == self.value:
+            return False
+
+        if self.SendPropEvent(wxEVT_PROP_CHANGING):
+            self.SendPropEvent(wxEVT_PROP_CHANGED)
+            self.Refresh()
+            return True
+        else:
+            #the parent rejects the operation, restore the original value
+            self.SetValue(old_value)
+            return False
+        return False
+
+    def LayoutControl(self):
+        """re-positioning the control"""
+        if self.window is None:
+            return
+        rc = self.grid.GetScrolledRect(wx.Rect(*self.regions['value']))
+        self.window.SetSize(rc.GetSize())
+        self.window.Move(rc.GetTopLeft())
+
+    def GetMinSize(self):
+        """return the min size"""
+        if self.window:
+            size = self.window.GetSize()
+            sz = self.min_size
+            size.y = max(sz.y, size.y)
+            return size
+        return super().GetMinSize()
+
+    def coerce(self, value):
+        try:
+            if self.formatter:
+                if self.formatter.validate(str(value)):
+                    value = self.formatter.coerce(str(value))
+                else:
+                    return None
+            elif self.value is not None:
+                value = type(self.value)(value)
+            return value
+        except ValueError:
+            traceback.print_exc(file=sys.stdout)
+            return None
+
+    def PostRefresh(self):
+        """notify the window to redraw itself"""
+        if self.window is not None:
+            wx.CallAfter(self.window.Refresh)
+
+class PropSeparator(PropBase):
+    def __init__(self, *args, **kwargs):
+        PropBase.__init__(self, *args, **kwargs)
+        self.regions = {
+                'label': wx.Rect(),
+                'expander': wx.Rect()
+                }
+        self.draws = {
+                'value': False,
+                'label': True,
+                'splitter': False,
+                'expander': True
+                }
+        self.Separator(True)
+
+class PropEditBox(PropControl):
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        style = wx.TE_PROCESS_ENTER
+        sz = self.GetMinSize()
+        if sz.y > 50:
+            style = wx.TE_MULTILINE
+        win = wx.TextCtrl(self.grid, wx.ID_ANY, self.GetValueAsString(),
+                          style=style)
+        if self.formatter:
+            validator = TextValidator(self, 'value', self.formatter, False, None)
+            win.SetValidator(validator)
+            if style & wx.TE_PROCESS_ENTER:
+                win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
+
+        return win
+
+    def OnPropTextEnter(self, evt):
+        """send when the enter key is pressed in the property control window"""
+        if self.window:
+            self.OnTextEnter()
+
+    def doGetValueFromWin(self):
+        """update the value"""
+        if self.window is None:
+            return None
+
+        value = None
+        if isinstance(self.window, wx.TextCtrl):
+            value = self.window.GetValue()
+
+        return value
+
+class PropText(PropEditBox):
+    pass
+
+class PropInt(PropText):
+    def __init__(self, *args, **kwargs):
+        PropText.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.IntFormatter())
+
+class PropHex(PropText):
+    def __init__(self, *args, **kwargs):
+        PropText.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.HexFormatter())
+
+class PropBin(PropText):
+    def __init__(self, *args, **kwargs):
+        PropText.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.BinFormatter())
+
+class PropFloat(PropText):
+    def __init__(self, *args, **kwargs):
+        PropText.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.FloatFormatter())
+
+class PropChoice(PropControl):
+    def __init__(self, choice, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.ChoiceFormatter(choice))
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.Choice(self.grid, wx.ID_ANY)
+        if self.formatter:
+            validator = SelectorValidator(self, 'value', self.formatter, True)
+            win.SetValidator(validator)
+
+        return win
+
+    def doGetValueFromWin(self):
+        """update the value"""
+        if self.window is None:
+            return None
+
+        sel = self.window.GetSelection()
+        if sel >= 0 and sel < self.window.GetCount():
+            value = self.window.GetString(sel)
+
+        return value
+
+
+class PropRadioBox(PropControl):
+    def __init__(self, choice, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.ChoiceFormatter(choice))
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        choices = []
+        if self.formatter and hasattr(self.formatter, 'validValues'):
+            choices = [x[1] for x in self.formatter.validValues()]
+
+        win = wx.RadioBox(self.grid, wx.ID_ANY, "", wx.DefaultPosition,
+                          wx.DefaultSize, choices, 5, wx.RA_SPECIFY_COLS)
+
+        if self.formatter:
+            validator = RadioBoxValidator(self, 'value', self.formatter,
+                                          True)
+            win.SetValidator(validator)
+        return win
+
+    def doGetValueFromWin(self):
+        """update the value"""
+        if self.window is None:
+            return None
+        sel = self.window.GetSelection()
+        if sel >= 0 and sel < self.window.GetCount():
+            value = self.window.GetString(sel)
+            return value
+        return None
+
+class PropCheckBox(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.BoolFormatter())
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.CheckBox(self.grid, wx.ID_ANY)
+        win.SetValue(int(self.value) != 0)
+        return win
+
+    def doGetValueFromWin(self):
+        value = self.window.GetValue()
+        return value
+
+
+class PropFile(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.PathFormatter(False, 'file'))
+        self.selected_file = None
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        #win = wx.Button(self.grid, wx.ID_ANY, self.GetValueAsString())
+        #win.Bind(wx.EVT_BUTTON, self.OnSelectFile)
+        self.selected_file = None
+        self.doSelectFile()
+        return None
+
+    def doSelectFile(self):
+        style = wx.FD_OPEN | wx.FD_FILE_MUST_EXIST
+        dlg = wx.FileDialog(self.grid, "Choose a file",
+                            self.GetValueAsString(), "", "*.*", style)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+    def doGetValueFromWin(self):
+        return self.selected_file
+
+class PropFolder(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.PathFormatter(False, 'folder'))
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        self.doSelectFolder()
+        return None
+
+    def doSelectFolder(self):
+        dlg = wx.DirDialog(self.grid, "Choose input directory",
+                           self.GetValueAsString(),
+                           wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetPath())
+        dlg.Destroy()
+
+class PropSpin(PropControl):
+    def __init__(self, min_value, max_value, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.IntFormatter(min_value, max_value))
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.SpinCtrl(self.grid,
+                          wx.ID_ANY,
+                          value=str(self.value),
+                          style=wx.SP_ARROW_KEYS)
+        if self.formatter:
+            validator = SpinSliderValidator(self, 'value', self.formatter,
+                                            True)
+            win.SetValidator(validator)
+        return win
+
+    def doGetValueFromWin(self):
+        """update the value"""
+        if self.window is None:
+            return None
+        value = self.window.GetValue()
+
+        return value
+
+class PropSlider(PropControl):
+    def __init__(self, min_value, max_value, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.Formatter(fmt.IntFormatter(min_value, max_value))
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.Slider(self.grid,
+                        wx.ID_ANY,
+                        value=int(self.value),
+                        style=wx.SL_LABELS | wx.SL_HORIZONTAL | wx.SL_TOP)
+        if self.formatter:
+            validator = SpinSliderValidator(self, 'value', self.formatter,
+                                            True)
+            win.SetValidator(validator)
+        return win
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        value = self.window.GetValue()
+        return value
+
+class PropDate(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.SetFormatter(fmt.DateFormatter())
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.adv.DatePickerCtrl(self.grid, wx.ID_ANY)
+        try:
+            win.SetValue(self.value)
+        except ValueError:
+            pass
+        return win
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        value = self.window.GetValue()
+        if self.formatter:
+            value = self.formatter.format(value)
+
+        return value
+
+class PropTime(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.SetFormatter(fmt.TimeFormatter())
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
+        try:
+            win.SetValue(self.value)
+        except ValueError:
+            pass
+        return win
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        value = self.window.GetValue()
+        if self.formatter:
+            value = self.formatter.format(value)
+
+        return value
+
+class PropDateTime(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.SetFormatter(fmt.DateTimeFormatter())
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        menu = wx.Menu()
+        date = menu.Append(wx.ID_ANY, 'Update date')
+        time = menu.Append(wx.ID_ANY, 'Update time')
+        cmd = PopupMenu(self.grid, menu)
+        win = None
+        if cmd == time.GetId():
+            win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
+        elif cmd == date.GetId():
+            win = wx.adv.DatePickerCtrl(self.grid, wx.ID_ANY)
+        if win is not None:
+            try:
+                win.SetValue(self.value)
+            except ValueError:
+                pass
+        return win
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        value = self.window.GetValue()
+        if self.formatter:
+            value = self.formatter.format(value)
+
+        return value
+
+class PropFont(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.SetFormatter(fmt.FontFormatter())
+
+        self.auto_apply = True
+
+    def AutoApply(self, apply):
+        self.SetAutoApply(apply, True)
+
+    def SetAutoApply(self, apply, silent=False):
+        self.auto_apply = apply
+        if not silent:
+            self.Refresh()
+
+    def GetAutoApply(self):
+        return self.auto_apply
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+
+        data = wx.FontData()
+        data.SetInitialFont(wx.Font(self.GetValue()))
+        dlg = wx.FontDialog(self.grid, data)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetFontData().GetChosenFont())
+        return None
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        font = self.window.GetSelectedFont()
+        value = font.GetNativeFontInfoDesc()
+        return value
+
+    def SetValue(self, value, silent=False):
+        if super().SetValue(value, True):
+            if self.auto_apply:
+                # set the font for value
+                font = wx.Font(self.GetValue())
+                font.SetFractionalPointSize(wx.NORMAL_FONT.GetFractionalPointSize())
+                self.SetValueFont(font, True)
+            if not silent:
+                self.Refresh()
+
+    def GetValueAsString(self):
+        """get the value as string"""
+        font =  wx.Font(self.GetValue())
+        return f'{font.GetFaceName()}, {font.GetFractionalPointSize()}'
+
+class PropColor(PropControl):
+    def __init__(self, *args, **kwargs):
+        PropControl.__init__(self, *args, **kwargs)
+        self.SetFormatter(fmt.ColorFormatter())
+        self.auto_apply = True
+
+    def AutoApply(self, apply):
+        self.SetAutoApply(apply, True)
+
+    def SetAutoApply(self, apply, silent=False):
+        self.auto_apply = apply
+        if not silent:
+            self.Refresh()
+
+    def GetAutoApply(self):
+        return self.auto_apply
+
+    def doCreateControl(self):
+        """create the control"""
+        if self.window is not None:
+            return self.window
+        data = wx.ColourData()
+        data.SetColour(wx.Colour(self.GetValue()))
+        dlg = wx.ColourDialog(self.grid, data)
+        if dlg.ShowModal() == wx.ID_OK:
+            self.SetValue(dlg.GetColourData().GetColour())
+        return None
+
+    def SetValue(self, value, silent=False):
+        if super().SetValue(value, True):
+            if self.auto_apply:
+                t = wx.Colour(self.GetValue())
+                c = t.GetAsString(wx.C2S_HTML_SYNTAX)
+                self.SetBgColor(c, c, c, True)
+                t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
+                t = t.GetAsString(wx.C2S_HTML_SYNTAX)
+                self.SetTextColor(t, t, t, True)
+
+            if not silent:
+                self.Refresh()
+
+    def doGetValueFromWin(self):
+        if self.window is None:
+            return None
+        clr = self.window.GetColour()
+        value = clr.GetAsString(wx.C2S_HTML_SYNTAX)
+        return value

@@ -1,7 +1,8 @@
 import numpy as np
 import wx
-import wx.lib.agw.aui as aui
-import wx.py as py
+from wx.lib.agw import aui
+from wx import py
+from .prop import *
 from . import propgrid as pg
 from . import formatters as fmt
 from . import enumtype
@@ -29,8 +30,8 @@ class PropArtCustom(pa.PropArtNative):
             if self.img_expand.GetImageCount() == 2:
                 (w, h) = self.img_expand.GetSize(0)
                 rc = p.regions['expander']
-                x = rc.x + (rc.width - w) / 2
-                y = rc.y + (rc.height - h) / 2 + 1
+                x = rc.x + (rc.width - w) // 2
+                y = rc.y + (rc.height - h) // 2 + 1
                 idx = 0
                 if not p.IsExpanded():
                     idx = 1
@@ -59,7 +60,7 @@ class PropArtCustom(pa.PropArtNative):
         dc.SetClippingRegion(rc)
         (w, h) = dc.GetTextExtent(p.label)
 
-        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h) / 2)
+        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h) // 2)
         p.show_label_tips = w > rc.width
         dc.DestroyClippingRegion()
 
@@ -74,7 +75,7 @@ class PropArtCustom(pa.PropArtNative):
     def DrawBackground(self, dc, p):
         # draw background
         rc = p.GetRect()
-        rcs = p.regions['splitter']
+        rcs = p.regions.get('splitter', rc)
         bg = wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE)
         brush = wx.Brush(bg)
         dc.SetBrush(brush)
@@ -89,7 +90,7 @@ class PropArtCustom(pa.PropArtNative):
         dc.SetFont(font)
 
         p.show_value_tips = False
-        if p.window is None:
+        if p.draws.get('value', False):
             crbg = p.bg_clr
             crtxt = wx.BLACK
             if not p.IsEnabled() or p.IsReadonly():
@@ -132,13 +133,13 @@ class PropArtCustom(pa.PropArtNative):
             value = p.GetValueAsString()
             (w, h) = dc.GetTextExtent(value)
             dc.SetClippingRegion(rc)
-            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h) / 2)
+            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h) // 2)
             p.show_value_tips = rc.width < w
             dc.DestroyClippingRegion()
 
     def DrawBorder(self, dc, p):
         rc = p.GetRect()
-        rcs = p.regions['splitter']
+        rcs = p.regions.get('splitter', rc)
         # value bottom border
         crbg = p.bg_clr
         if p.IsEnabled() and not p.IsReadonly():
@@ -196,41 +197,40 @@ class MainFrame(wx.Frame):
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
         # general
-        g.InsertSeparator('general', 'general')
+        g.Insert(PropSeparator().Label('general'))
 
-        g.InsertProperty('string', 'string', 'hello world!').Indent(1)
+        g.Insert(PropText().Label('string').Value('hello world!').Indent(1))
 
-        g.InsertProperty('disable', 'disable', 'hello world!').Indent(1).Enable(False)
+        g.Insert(PropText().Label('disable').Value('hello world!').Indent(1).Enable(False))
 
-        g.InsertProperty('italic', 'italic', 'hello world!').Indent(1)\
-                .ValueFont(wx.Font(wx.NORMAL_FONT).Italic())
+        g.Insert(PropText().Label('italic').Value('hello world!').Indent(1)\
+                .ValueFont(wx.Font(wx.NORMAL_FONT).Italic()))
 
-        g.InsertProperty('bold', 'bold', 'hello world!').Indent(1)\
-             .ValueFont(wx.Font(wx.NORMAL_FONT).Bold())
-        g.InsertProperty('not_draggable', 'not draggable', 'hello world!').Indent(1).Draggable(False)
+        g.Insert(PropText().Label('bold').Value('hello world!').Indent(1)\
+             .ValueFont(wx.Font(wx.NORMAL_FONT).Bold()))
+        g.Insert(PropText().Label('not draggable').Value('hello world!').Indent(1).Draggable(False))
 
-        g.InsertProperty('integer', 'integer', 42).Indent(1).Formatter(fmt.IntFormatter())
+        g.Insert(PropInt().Label('integer').Value(42).Indent(1))
 
-        g.InsertProperty('hex', 'hex', 42).Indent(1).Formatter(fmt.HexFormatter())
+        g.Insert(PropHex().Label('hex').Value(42).Indent(1))
 
-        g.InsertProperty('bin', 'bin', 42).Indent(1).Formatter(fmt.BinFormatter())
+        g.Insert(PropBin().Label('bin').Value( 42).Indent(1))
 
-        g.InsertProperty('float', 'float', 42.0).Indent(1).Formatter(fmt.FloatFormatter())
+        g.Insert(PropFloat().Label('float').Value(42.0).Indent(1))
 
-        g.InsertProperty('choice', 'choice', 2).Indent(1)\
-                .Formatter(fmt.ChoiceFormatter([2, 4, 8, 16, 32, 64, 128, 256]))
+        g.Insert(PropChoice([2, 4, 8, 16, 32, 64, 128, 256]).Label('choice').Value(2).Indent(1))
 
-        g.InsertProperty('date', 'date', wx.DateTime.Today()).Indent(1).Formatter(fmt.DateFormatter())
+        g.Insert(PropDate().Label('date').Value(wx.DateTime.Today()).Indent(1))
 
-        g.InsertProperty('time', 'time', wx.DateTime.Now()).Indent(1).Formatter(fmt.TimeFormatter())
+        g.Insert(PropTime().Label('time').Value(wx.DateTime.Now()).Indent(1))
+        g.Insert(PropDateTime().Label('datetime').Value(wx.DateTime.Now()).Indent(1))
 
-        g.InsertProperty('datetime', 'datetime', wx.DateTime.Now()).Indent(1)\
-            .Formatter(fmt.DateTimeFormatter()).ControlStyle('none')
-
+        g.Insert(PropDateTime().Name('datetime').Label('datetime auto update')\
+                .Value(wx.DateTime.Now()).Indent(1).Editing(False))
         # control
-        g.InsertSeparator('type', 'type')
+        g.Insert(PropSeparator().Label('type'))
 
-        g.InsertProperty('editbox', 'editbox', 'string').Indent(1)
+        g.Insert(PropEditBox().Label('editbox').Value('string').Indent(1))
 
         choices = enumtype.EnumType(Monday=1,
                                     Tuesday=2,
@@ -238,37 +238,31 @@ class MainFrame(wx.Frame):
                                     Thursday=4,
                                     Friday=5,
                                     Saturday=6,
-                                    Sunday=7)
-        g.InsertProperty('choice', 'choice', 1).Formatter(fmt.EnumFormatter(choices)).Indent(1)
+                                    Sunday=7)._items
+        g.Insert(PropChoice(choices).Label('choice').Value(1).Indent(1))
 
-        g.InsertProperty('dir_dialog', 'folder', '/home').Indent(1)\
-                .Formatter(fmt.PathFormatter(False, 'folder'))
+        g.Insert(PropFolder().Label('folder').Value('./').Indent(1))
 
-        g.InsertProperty('file_dialog', 'file', '/home/temp.txt').Indent(1)\
-                .Formatter(fmt.PathFormatter(False, 'file'))
+        g.Insert(PropFile().Label('file').Value('./temp.txt').Indent(1))
 
-        g.InsertProperty('slider', 'slider', 50).Indent(1).ControlStyle('slider')\
-                .Formatter(fmt.IntFormatter(1, 101))
+        g.Insert(PropSlider(1, 100).Label('slider').Value(50).Indent(1))
 
-        g.InsertProperty('spin', 'spin', 50).Indent(1).ControlStyle('spin')\
-                .Formatter(fmt.IntFormatter(1, 100))
+        g.Insert(PropSpin(1, 100).Label('spin').Value(50).Indent(1))
 
-        g.InsertProperty('checkbox', 'checkbox', 0).Indent(1).ControlStyle('checkbox')\
-                .Formatter(fmt.BoolFormatter())
+        g.Insert(PropCheckBox().Label('checkbox').Value(0).Indent(1))
 
-        g.InsertProperty('radiobox', 'radiobox', 1).Indent(1).ControlStyle('radiobox')\
-                .Formatter(fmt.ChoiceFormatter({
-                    1: '1',
-                    0: '0',
-                    'Z': 'Z',
-                    'X': 'X'
-                    }))
+        choice = {1: '1',
+                  0: '0',
+                  'Z': 'Z',
+                  'X': 'X'
+                  }
+        g.Insert(PropRadioBox(choice).Label('radiobox').Value(1).Indent(1))
 
-        g.InsertProperty('date', 'date', wx.DateTime.Today()).Indent(1).Formatter(fmt.DateFormatter())
+        g.Insert(PropDate().Label('date').Value(wx.DateTime.Today()).Indent(1))
 
-        g.InsertProperty('time', 'time', wx.DateTime.Now()).Indent(1).Formatter(fmt.TimeFormatter())
+        g.Insert(PropTime().Label('time').Value(wx.DateTime.Now()).Indent(1))
 
-        g.InsertProperty('font', 'font', wx.NORMAL_FONT).Indent(1).Formatter(fmt.FontFormatter())
+        g.Insert(PropFont().Label('font').Value(wx.NORMAL_FONT).Indent(1))
 
         # color
         self.clr_map = np.array(
@@ -284,14 +278,13 @@ class MainFrame(wx.Frame):
              [0., 130., 200., 255.], [70., 240., 240., 255.],
              [170., 255., 195., 255.]]) / 255
         chex = self.rgb2hex(self.clr_map[:, :-1])
-        p = self.propgrid.InsertSeparator("color", "color")
+        p = g.Insert(PropSeparator().Label("color"))
         for i, c in enumerate(chex):
             t = wx.Colour(c)
             t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
             t = t.GetAsString(wx.C2S_HTML_SYNTAX)
-            self.propgrid.InsertProperty("clr-%d" % i, '%d' % i,
-                                             wx.Colour(c)).BgColor(c, c, c)\
-                .Formatter(fmt.ColorFormatter()).TextColor(t, t, t).Indent(1)
+            g.Insert(PropColor().Label(f'{i}').Value(wx.Colour(c)).BgColor(c, c, c)\
+                .TextColor(t, t, t).Indent(1))
 
         pane_grid = aui.AuiPaneInfo().Name("propgrid").Caption("PropGrid").CenterPane()
         self._mgr.AddPane(self.propgrid, pane_grid)
@@ -311,8 +304,6 @@ class MainFrame(wx.Frame):
         self._mgr.MinimizePane(pane_shell)
         self._mgr.Update()
 
-        self.Bind(pg.EVT_PROP_CHANGED, self.OnPropChanged, id=wx.ID_ANY)
-
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
         self.timer.Start(100)
@@ -321,27 +312,8 @@ class MainFrame(wx.Frame):
         clr = np.sum(clr * 255 * [2**16, 2**8, 1], 1).astype(np.int32)
         return ["#{:06x}".format(c) for c in clr]
 
-    def OnPropChanged(self, evt):
-        p = evt.GetProperty()
-        if p.GetName().startswith('clr-'):
-            idx = int(p.GetLabel())
-            if idx >= 0 and idx < len(self.clr_map):
-                t = wx.Colour(p.GetValue())
-                self.clr_map[idx] = [
-                    t.Red() / 255.,
-                    t.Green() / 255.,
-                    t.Blue() / 255., 1.
-                ]
-                c = t.GetAsString(wx.C2S_HTML_SYNTAX)
-                p.SetBgColor(c, c, c)
-                t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
-                t = t.GetAsString(wx.C2S_HTML_SYNTAX)
-                p.SetTextColor(t, t, t)
-        if 'font' in p.GetName():
-            p.SetValueFont(p.GetValue())
-
     def OnTimer(self, event):
-        p = self.propgrid.GetProperty('datetime')
+        p = self.propgrid.Get('datetime')
         if p:
             p.SetValue(wx.DateTime.Now())
 
