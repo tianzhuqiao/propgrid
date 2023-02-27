@@ -42,6 +42,9 @@ EVT_PROP_BEGIN_DRAG = wx.PyEventBinder(wxEVT_PROP_BEGIN_DRAG, 1)
 
 
 class PropBase():
+    pass
+
+class PropGeneric(PropBase):
     def __init__(self, label=''):
         self.grid = None
         self.name = ''
@@ -709,9 +712,9 @@ class PropertyEvent(wx.PyCommandEvent):
         """return whether the event is refused"""
         return self.veto
 
-class PropControl(PropBase):
+class PropControl(PropGeneric):
     def __init__(self, *args, **kwargs):
-        PropBase.__init__(self, *args, **kwargs)
+        PropGeneric.__init__(self, *args, **kwargs)
         self.window = None
         self.allow_editing = True
 
@@ -893,9 +896,9 @@ class PropControl(PropBase):
         if self.window is not None:
             wx.CallAfter(self.window.Refresh)
 
-class PropSeparator(PropBase):
+class PropSeparator(PropGeneric):
     def __init__(self, *args, **kwargs):
-        PropBase.__init__(self, *args, **kwargs)
+        PropGeneric.__init__(self, *args, **kwargs)
         self.regions = {
                 'label': wx.Rect(),
                 'expander': wx.Rect()
@@ -995,8 +998,10 @@ class PropChoice(PropControl):
 
 
 class PropRadioBox(PropControl):
-    def __init__(self, choice, *args, **kwargs):
+    def __init__(self, choice=None, *args, **kwargs):
         PropControl.__init__(self, *args, **kwargs)
+        if choice is None:
+            choice = []
         self.Formatter(fmt.ChoiceFormatter(choice))
 
     def doCreateControl(self):
@@ -1092,7 +1097,7 @@ class PropFolder(PropControl):
         dlg.Destroy()
 
 class PropSpin(PropControl):
-    def __init__(self, min_value, max_value, *args, **kwargs):
+    def __init__(self, min_value=0, max_value=100, *args, **kwargs):
         PropControl.__init__(self, *args, **kwargs)
         self.Formatter(fmt.IntFormatter(min_value, max_value))
 
@@ -1119,7 +1124,7 @@ class PropSpin(PropControl):
         return value
 
 class PropSlider(PropControl):
-    def __init__(self, min_value, max_value, *args, **kwargs):
+    def __init__(self, min_value=0, max_value=100, *args, **kwargs):
         PropControl.__init__(self, *args, **kwargs)
         self.Formatter(fmt.IntFormatter(min_value, max_value))
 

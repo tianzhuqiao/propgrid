@@ -219,7 +219,7 @@ class PropGrid(wx.ScrolledWindow):
             return True
         return False
 
-    def DeleteAllProperties(self, update=True):
+    def DeleteAll(self, update=True):
         for i in range(len(self._props) - 1, -1, -1):
             self.Delete(self._props[i], update)
 

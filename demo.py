@@ -160,6 +160,37 @@ class PropArtCustom(pa.PropArtNative):
         dc.SetPen(wx.Pen(wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DHILIGHT)))
         dc.DrawLine(rc.left, rc.top, rcs.right, rc.top)
 
+class Prop(PropBase):
+    def __init__(self, style='Text', *args, **kwargs):
+        self.prop = None
+        self._set_style(style, *args, **kwargs)
+
+    def all_subclasses(self):
+        def _sub_classes(cls):
+            return set(cls.__subclasses__()).union(
+                    [s for c in cls.__subclasses__() for s in _sub_classes(c)])
+        sub =  _sub_classes(PropBase)
+        return {s.__name__: s for s in sub if sub != Prop}
+
+    def __getattr__(self, name):
+        return getattr(self.prop, name)
+
+    def _set_style(self, style, *args, **kwargs):
+        sub = self.all_subclasses()
+        cls = sub.get(style, None)
+        if cls is None:
+            cls = sub.get(f'Prop{style}', None)
+        if cls is None:
+            cls = sub.get(f'Prop{style.title()}', None)
+        if cls is None:
+            return False
+
+        if isinstance(self.prop, cls):
+            return True
+
+        prop = cls(*args, **kwargs)
+        self.prop = prop
+        return True
 
 class MainFrame(wx.Frame):
     ID_ART_NATIVE = wx.NewIdRef()
@@ -197,6 +228,7 @@ class MainFrame(wx.Frame):
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
         # general
+        g.Insert(Prop('Spin', 1, 100, 'magic').Value(1))
         g.Insert(PropSeparator().Label('general'))
 
         g.Insert(PropText().Label('string').Value('hello world!').Indent(1))
