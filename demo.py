@@ -228,7 +228,7 @@ class MainFrame(wx.Frame):
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
         # general
-        g.Insert(Prop('Spin', 1, 100, 'magic').Value(1))
+        g.Insert(Prop('Spin', 1, 100, 'magic')).Value(1)
         g.Insert(PropSeparator().Label('general'))
 
         g.Insert(PropText().Label('string').Value('hello world!').Indent(1))

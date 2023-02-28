@@ -95,6 +95,43 @@ class PropGeneric(PropBase):
         self.top_value_border = False
         self.bottom_value_border = False
 
+    def copy(self, p):
+        assert isinstance(p, PropGeneric)
+        self.grid = p.grid
+        if p.font_label:
+            self.font_label = wx.Font(p.font_label)
+        if p.font_value:
+            self.font_value = wx.Font(p.font_value)
+        self.SetTextColor(p.text_clr, p.text_clr_sel, p.text_clr_disabled, True)
+        self.SetBgColor(p.bg_clr, p.bg_clr_sel, p.bg_clr_disabled, True)
+        self.data = p.data
+        if p.formatter:
+            self.formatter = copy.copy(p.formatter)
+
+        self.name = p.name
+        self.label = p.label
+        self.label_tip = p.label_tip
+        self.value = p.value
+        self.value_tip = p.value_tip
+        # indicate if data is garbage
+        self.value_valid = p.value_valid
+        # -1 to use the default one defined in parent's art provider
+        self.title_width = p.title_width
+        self.indent = p.indent
+        self.activated = p.activated
+        self.enable = p.enable
+        self.visible = p.visible
+        self.readonly = p.readonly
+        self.min_size = p.min_size
+        self.draws = p.draws
+        self.show_label_tips = p.show_label_tips
+        self.show_value_tips = p.show_label_tips
+        self.separator = p.separator
+        self.data = copy.deepcopy(p.data)
+
+        self.draggable = p.draggable
+        self.configurable = p.configurable
+
     def duplicate(self):
         """
         copy the object
@@ -103,17 +140,7 @@ class PropGeneric(PropBase):
         objects
         """
         p = copy.deepcopy(self)
-        p.grid = None
-        if self.font_label:
-            p.font_label = wx.Font(self.font_label)
-        if self.font_value:
-            p.font_value = wx.Font(self.font_value)
-        p.SetTextColor(self.text_clr, self.text_clr_sel,
-                       self.text_clr_disabled, True)
-        p.SetBgColor(self.bg_clr, self.bg_clr_sel, self.bg_clr_disabled, True)
-        p.data = self.data
-        if self.formatter:
-            p.formatter = copy.copy(self.formatter)
+        p.copy(self)
         return p
 
     def Grid(self, grid):
@@ -718,6 +745,10 @@ class PropControl(PropGeneric):
         self.window = None
         self.allow_editing = True
 
+    def __del__(self):
+        self.DestroyControl()
+        super().__del__()
+
     def Editing(self, enable):
         self.SetEditting(enable)
         return self
@@ -823,10 +854,11 @@ class PropControl(PropGeneric):
                 self.window = None
                 self.Resize()
 
+        self.draws['value'] = True
         if self.window:
-            self.draws['value'] = True
             # otherwise, it may crash (e..g, MacOS)
-            wx.CallAfter(_destroy)
+            # not be able to reproduce it with MacOS 13.2.1
+            _destroy()
             return True
         return False
 
@@ -1097,7 +1129,7 @@ class PropFolder(PropControl):
         dlg.Destroy()
 
 class PropSpin(PropControl):
-    def __init__(self, min_value=0, max_value=100, *args, **kwargs):
+    def __init__(self, min_value=0, max_value=2**31-1, *args, **kwargs):
         PropControl.__init__(self, *args, **kwargs)
         self.Formatter(fmt.IntFormatter(min_value, max_value))
 
@@ -1124,7 +1156,7 @@ class PropSpin(PropControl):
         return value
 
 class PropSlider(PropControl):
-    def __init__(self, min_value=0, max_value=100, *args, **kwargs):
+    def __init__(self, min_value=0, max_value=2**31-1, *args, **kwargs):
         PropControl.__init__(self, *args, **kwargs)
         self.Formatter(fmt.IntFormatter(min_value, max_value))
 
