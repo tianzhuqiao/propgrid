@@ -696,7 +696,7 @@ class PropGeneric(PropBase):
     def SendPropEvent(self, event):
         """ send property grid event to parent"""
         win = self.GetGrid()
-        evt = PropertyEvent(event, self)
+        evt = PropEvent(event, self)
         evt.SetEventObject(win)
         evt_handler = win.GetEventHandler()
 
@@ -716,17 +716,17 @@ class PropGeneric(PropBase):
     def PostRefresh(self):
         pass
 
-class PropertyEvent(wx.PyCommandEvent):
+class PropEvent(wx.PyCommandEvent):
     def __init__(self, commandType, prop, id=0):
         wx.PyCommandEvent.__init__(self, commandType, id)
         self.prop = prop
         self.veto = False
 
-    def Get(self):
+    def GetProp(self):
         """return the attached Property"""
         return self.prop
 
-    def Set(self, prop):
+    def SetProp(self, prop):
         """attach the Property instance"""
         assert isinstance(prop, PropBase)
         self.prop = prop
@@ -747,7 +747,6 @@ class PropControl(PropGeneric):
 
     def __del__(self):
         self.DestroyControl()
-        super().__del__()
 
     def Editing(self, enable):
         self.SetEditting(enable)

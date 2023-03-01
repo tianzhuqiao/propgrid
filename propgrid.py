@@ -232,7 +232,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def Index(self, prop):
         """return the index of prop, or -1 if not found"""
-        p = self.Get(prop)
+        p = self.GetProp(prop)
         if not p:
             return -1
         try:
@@ -243,7 +243,7 @@ class PropGrid(wx.ScrolledWindow):
         return -1
 
     def Get(self, prop):
-        """return the Property instance"""
+        """return the prop instance"""
         if isinstance(prop, PropBase):
             # if prop is a Property instance, simply return
             return prop
@@ -395,10 +395,10 @@ class PropGrid(wx.ScrolledWindow):
         """send the property event to the parent"""
         prop = self.Get(prop)
         # prepare the event
-        if isinstance(event, PropertyEvent):
+        if isinstance(event, PropEvent):
             evt = event
         elif isinstance(event, int):
-            evt = PropertyEvent(event, prop)
+            evt = PropEvent(event, prop)
         else:
             raise ValueError()
 
@@ -525,8 +525,8 @@ class PropGrid(wx.ScrolledWindow):
 
     def OnPropRefresh(self, evt):
         """refresh the property, for example, due to value changed"""
-        self.SendPropEvent(evt.GetEventType(), evt.Get())
-        prop = evt.Get()
+        self.SendPropEvent(evt.GetEventType(), evt.GetProp())
+        prop = evt.GetProp()
         if prop is None:
             return
         rc = prop.GetRect()
@@ -555,7 +555,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def OnPropEventsHandler(self, evt):
         """process the property notification"""
-        if not self.SendPropEvent(evt.GetEventType(), evt.Get()):
+        if not self.SendPropEvent(evt.GetEventType(), evt.GetProp()):
             # vetoed by parent, ignore the event
             return False
 
@@ -566,7 +566,7 @@ class PropGrid(wx.ScrolledWindow):
         ]:
             self.UpdateGrid()
         elif eid == wxEVT_PROP_RIGHT_CLICK:
-            prop = evt.Get()
+            prop = evt.GetProp()
             if self.IsConfigurable() and prop.IsConfigurable():
                 # show configuration menu
                 menu = self.GetContextMenu(prop)
