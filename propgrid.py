@@ -1,10 +1,8 @@
 import sys
 import traceback
-import json
 import six
 import wx
 import wx.py.dispatcher as dp
-from wx.lib.agw import aui
 from .prop import *
 from .propart import PropArtNative
 from .utility import PopupMenu
@@ -965,10 +963,19 @@ class PropSettings(wx.Dialog):
         self.stcline = wx.StaticLine(self, style=wx.LI_HORIZONTAL)
         sz.Add(self.stcline, 0, wx.EXPAND | wx.ALL, 5)
 
-        sz2 = wx.BoxSizer(wx.HORIZONTAL)
-        sz2.Add(wx.Button(self, wx.ID_OK, u"&Ok"), 0, wx.ALL, 5)
-        sz2.Add(wx.Button(self, wx.ID_CANCEL, u"&Cancel"), 0, wx.ALL, 5)
-        sz.Add(sz2, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+
+        btnsizer = wx.StdDialogButtonSizer()
+        btnsizer.AddStretchSpacer(1)
+
+        btn = wx.Button(self, wx.ID_OK)
+        btn.SetDefault()
+        btnsizer.AddButton(btn)
+
+        btn = wx.Button(self, wx.ID_CANCEL)
+        btnsizer.AddButton(btn)
+        btnsizer.Realize()
+
+        sz.Add(btnsizer, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
 
         self.SetSizer(sz)
         self.Layout()
