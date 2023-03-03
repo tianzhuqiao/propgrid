@@ -230,7 +230,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def Index(self, prop):
         """return the index of prop, or -1 if not found"""
-        p = self.GetProp(prop)
+        p = self.Get(prop)
         if not p:
             return -1
         try:
