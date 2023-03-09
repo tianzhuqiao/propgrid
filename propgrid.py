@@ -210,7 +210,8 @@ class PropGrid(wx.ScrolledWindow):
         if not isinstance(prop, PropBase):
             return None
         p = prop.duplicate()
-        p.SetParent(self)
+        p.SetGrid(self)
+        p.Activated(False)
         return self.Insert(p, index, update)
 
     def Remove(self, prop, update=True):
@@ -603,7 +604,7 @@ class PropGrid(wx.ScrolledWindow):
             return
 
         if eid == self.ID_PROP_GRID_DELETE:
-            self.DeleteProperty(prop)
+            self.Delete(prop)
         elif eid == self.ID_PROP_GRID_READ_ONLY:
             prop.SetReadonly(not prop.IsReadonly())
         elif eid == self.ID_PROP_GRID_PROP:
@@ -921,7 +922,7 @@ class PropGrid(wx.ScrolledWindow):
         if PropGrid.drag_pg != self:
             # drop the property from the other window, copy it
             indent = PropGrid.drag_prop.GetIndent()
-            self.CopyProperty(PropGrid.drag_prop, index2)
+            self.CopyProp(PropGrid.drag_prop, index2)
             for i in six.moves.range(index + 1,
                                      PropGrid.drag_pg.GetCount()):
                 # copy all its children
@@ -930,7 +931,7 @@ class PropGrid(wx.ScrolledWindow):
                     break
                 if index2 != -1:
                     index2 = index2 + 1
-                self.CopyProperty(child, index2)
+                self.CopyProp(child, index2)
         else:
             # move the property if necessary
             if prop == PropGrid.drag_prop:
@@ -955,7 +956,10 @@ class PropGrid(wx.ScrolledWindow):
 
         if self.drag_image:
             self.drag_image.Hide()
-        if PropGrid.drag_prop:
+        if PropGrid.drag_prop and PropGrid.drag_pg == self:
+            # only do drop if we are moving the prop in the same propgrid;
+            # it is more complicated if moved from another propgrid (e.g.,
+            # first moved in, insert prop, then move; if mouse moves away, delete)
             self.doDrop(pt.x, pt.y, PropGrid.drag_prop.GetName())
         if self.drag_image:
             self.drag_image.Move(pt)
