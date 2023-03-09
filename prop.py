@@ -183,12 +183,16 @@ class PropGeneric(PropBase):
 
     def Enable(self, enable=True, silent=True):
         """enable/disable the property"""
+        self.SetEnable(enable, silent=silent)
+        return self
+
+    def SetEnable(self, enable=True, silent=False):
+        """enable/disable the property"""
         if self.enable == enable:
-            return self
+            return
         self.enable = enable
         if not silent:
             self.Refresh()
-        return self
 
     def IsEnabled(self):
         """return true if the property is enabled"""
@@ -418,12 +422,11 @@ class PropGeneric(PropBase):
 
     def SetExpand(self, expand=True, silent=False):
         """expand/collapse the children"""
-        if not self.HasChildren():
-            return
         if expand == self.expanded:
             return
         self.expanded = expand
-        if silent:
+
+        if silent or not self.HasChildren():
             return
         if self.expanded:
             evt = wxEVT_PROP_EXPANDED
