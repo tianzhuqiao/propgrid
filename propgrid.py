@@ -19,12 +19,17 @@ class PropDropTarget(wx.DropTarget):
         self.obj = wx.TextDataObject()
         self.SetDataObject(self.obj)
         self.frame = frame
+        self.SetDefaultAction(wx.DragMove)
 
     def OnEnter(self, x, y, d):
-        return super(PropDropTarget, self).OnDragOver(x, y, d)
+        self.frame.OnEnter(x, y, d)
+        return d
 
     def OnLeave(self):
-        pass
+        self.frame.OnLeave()
+
+    def OnDrop(self, x, y):
+        return True
 
     def OnData(self, x, y, d):
         if not self.GetData():
@@ -34,15 +39,8 @@ class PropDropTarget(wx.DropTarget):
         return d
 
     def OnDragOver(self, x, y, d):
-        pt = wx.Point(x, y)
-        rc = self.frame.GetClientRect()
-        if rc.Contains(pt):
-            (x, y) = self.frame.GetViewStart()
-            if pt.y < 15:
-                self.frame.Scroll(-1, y - (15 - pt.y) / 3)
-            if pt.y > rc.bottom - 15:
-                self.frame.Scroll(-1, y - (rc.bottom - 15 - pt.y) / 3)
-        return super(PropDropTarget, self).OnDragOver(x, y, d)
+        self.frame.OnDragOver(x, y, d)
+        return d
 
 
 class PropGrid(wx.ScrolledWindow):
@@ -94,6 +92,9 @@ class PropGrid(wx.ScrolledWindow):
         self.draggable = True
         self.configurable = True
 
+        self.drag_image = None
+        self.drag_bitmap = None
+
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
@@ -124,6 +125,30 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(EVT_PROP_BEGIN_DRAG, self.OnPropEventsHandler)
         self.Bind(wx.EVT_MENU, self.OnProcessCommand)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
+
+    def CreateDragImage(self, prop):
+        memory = wx.MemoryDC(wx.Bitmap(1, 1))
+
+        w, h = prop.GetSize()
+        w = min(500, w-100)
+
+        scale_factor = self.GetContentScaleFactor()
+        bitmap = wx.Bitmap(w*scale_factor, h*scale_factor)
+        bitmap.SetScaleFactor(scale_factor)
+        memory.SelectObject(bitmap)
+
+        memory.Clear()
+        p = prop.duplicate()
+        p.SetGrid(self)
+        p.top_value_border = True
+        p.bottom_value_border = True
+        p.activated = True
+        p.SetRect(wx.Rect(0, 0, w, h))
+        self._art.DrawItem(memory, p)
+
+        memory.SelectObject(wx.NullBitmap)
+
+        return bitmap
 
     def SetArtProvider(self, art):
         self._art = art
@@ -709,11 +734,12 @@ class PropGrid(wx.ScrolledWindow):
                     index = index - 1
                     self.prop_under_mouse = self.Get(index)
                     self.resize_mode = self.RESIZE_BOT
-            elif ht == 'label':
+            elif ht == 'label' or ht is None:
                 # start drag & drop
                 if self.IsDraggable() and prop.IsDraggable():
                     PropGrid.drag_start = self.ClientToScreen(pt)
                     PropGrid.drag_prop = prop
+                    PropGrid.drag_pg = self
                     PropGrid.drag_state = 1
         # activate the property under mouse
         self.SetSelection(index)
@@ -732,11 +758,6 @@ class PropGrid(wx.ScrolledWindow):
         # finish resizing
         self.pos_mouse_down = wx.Point(0, 0)
         self.resize_mode = self.RESIZE_NONE
-
-        # finish drag & drop
-        PropGrid.drag_prop = None
-        PropGrid.drag_state = 0
-        PropGrid.drag_start = wx.Point(0, 0)
 
         evt.Skip()
 
@@ -770,6 +791,7 @@ class PropGrid(wx.ScrolledWindow):
             # pass the event to the property
             prop = self.Get(index)
             prop.OnMouseMove(pt)
+
         # drag & drop
         if evt.LeftIsDown() and PropGrid.drag_prop and\
            PropGrid.drag_state == 1:
@@ -779,13 +801,12 @@ class PropGrid(wx.ScrolledWindow):
                 if self.SendPropEvent(wxEVT_PROP_BEGIN_DRAG, self.drag_prop):
                     # the mouse is moved, so start drag & drop
                     PropGrid.drag_state = 2
-                    PropGrid.drag_pg = self
                     # start drag operation
+                    self._set_capture(False)
                     propData = wx.TextDataObject(PropGrid.drag_prop.GetName())
                     source = wx.DropSource(PropGrid.drag_pg)
                     source.SetData(propData)
-
-                    rtn = source.DoDragDrop(True)
+                    rtn = source.DoDragDrop(wx.Drag_AllowMove)
                     if rtn == wx.DragError:
                         wx.LogError("An error occurred during drag \
                                      and drop operation")
@@ -797,6 +818,9 @@ class PropGrid(wx.ScrolledWindow):
                         pass
                     elif rtn == wx.DragCancel:
                         pass
+                    # finish drag & drop
+                    PropGrid.drag_prop = None
+                    PropGrid.drag_start = wx.Point(0, 0)
                     PropGrid.drag_state = 0
                     PropGrid.drag_pg = None
 
@@ -855,6 +879,8 @@ class PropGrid(wx.ScrolledWindow):
                         self.SetCursor(self.resize_cursor_vert)
                     else:
                         self.SetCursor(wx.NullCursor)
+
+
         evt.Skip()
 
     def OnMouseLeave(self, evt):
@@ -873,8 +899,7 @@ class PropGrid(wx.ScrolledWindow):
             prop = self.Get(index)
             prop.OnMouseRightClick(pt)
 
-    def OnDrop(self, x, y, name):
-        """drop the property"""
+    def doDrop(self, x, y, name):
         pt = wx.Point(x, y)
         pt = self.CalcUnscrolledPosition(pt)
         index2 = self.PropHitTest(pt)
@@ -913,6 +938,47 @@ class PropGrid(wx.ScrolledWindow):
             self.doMoveProperty(index, index2)
         self.UpdateGrid()
 
+    def OnDrop(self, x, y, name):
+        """drop the property"""
+        self.OnLeave()
+        self.doDrop(x, y, name)
+
+    def OnDragOver(self, x, y, d):
+        pt = wx.Point(x, y)
+        rc = self.GetClientRect()
+        if rc.Contains(pt):
+            (x, y) = self.GetViewStart()
+            if pt.y < 15:
+                self.Scroll(-1, y - (15 - pt.y) / 3)
+            if pt.y > rc.bottom - 15:
+                self.Scroll(-1, y - (rc.bottom - 15 - pt.y) / 3)
+
+        if self.drag_image:
+            self.drag_image.Hide()
+        if PropGrid.drag_prop:
+            self.doDrop(pt.x, pt.y, PropGrid.drag_prop.GetName())
+        if self.drag_image:
+            self.drag_image.Move(pt)
+            self.drag_image.Show()
+
+    def OnEnter(self, x, y, d):
+        if self.HasCapture():
+            self.ReleaseMouse()
+        self.OnLeave()
+        if PropGrid.drag_prop:
+            if wx.Platform == "__WXMAC__":
+                # not work on GTK3
+                self.drag_bitmap = self.CreateDragImage(PropGrid.drag_prop)
+                self.drag_image = wx.DragImage(self.drag_bitmap)
+                self.drag_image.BeginDrag(wx.Point(0,0), self)
+                self.drag_image.Move(wx.Point(x, y))
+                self.drag_image.Show()
+
+    def OnLeave(self):
+        if self.drag_image:
+            self.drag_image.Hide()
+            self.drag_image.EndDrag()
+            self.drag_image = None
 
 class PropSettings(wx.Dialog):
     def __init__(self, parent, prop):

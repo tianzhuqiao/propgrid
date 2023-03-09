@@ -139,7 +139,7 @@ class PropGeneric(PropBase):
         copy.deepcopy does not work since the object contains pointer to wx
         objects
         """
-        p = copy.deepcopy(self)
+        p = copy.copy(self)
         p.copy(self)
         return p
 
@@ -925,7 +925,7 @@ class PropControl(PropGeneric):
     def PostRefresh(self):
         """notify the window to redraw itself"""
         if self.window is not None:
-            wx.CallAfter(self.window.Refresh)
+            self.window.Refresh()
 
 class PropSeparator(PropGeneric):
     def __init__(self, *args, **kwargs):
