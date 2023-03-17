@@ -228,7 +228,6 @@ class MainFrame(wx.Frame):
         self.propgrid = pg.PropGrid(self)
         g = self.propgrid
         # general
-        g.Insert(Prop('Spin', 1, 100, 'magic')).Value(1)
         g.Insert(PropSeparator().Label('general'))
 
         g.Insert(PropText().Label('string').Value('hello world!').Indent(1))
@@ -296,6 +295,9 @@ class MainFrame(wx.Frame):
 
         g.Insert(PropFont().Label('font').Value(wx.NORMAL_FONT).Indent(1))
 
+        self.propgrid2 = pg.PropGrid(self)
+        g2 = self.propgrid2
+        g2.Insert(Prop('Spin', 1, 100, 'magic')).Value(1)
         # color
         self.clr_map = np.array(
             [[170., 110., 40., 255.], [0., 0., 128., 255.],
@@ -310,16 +312,21 @@ class MainFrame(wx.Frame):
              [0., 130., 200., 255.], [70., 240., 240., 255.],
              [170., 255., 195., 255.]]) / 255
         chex = self.rgb2hex(self.clr_map[:, :-1])
-        p = g.Insert(PropSeparator().Label("color"))
+        p = g2.Insert(PropSeparator().Label("color"))
         for i, c in enumerate(chex):
             t = wx.Colour(c)
             t.SetRGB(t.GetRGB() ^ 0xFFFFFF)
             t = t.GetAsString(wx.C2S_HTML_SYNTAX)
-            g.Insert(PropColor().Label(f'{i}').Value(wx.Colour(c)).BgColor(c, c, c)\
+            g2.Insert(PropColor().Label(f'{i}').Value(wx.Colour(c)).BgColor(c, c, c)\
                 .TextColor(t, t, t).Indent(1))
 
         pane_grid = aui.AuiPaneInfo().Name("propgrid").Caption("PropGrid").CenterPane()
         self._mgr.AddPane(self.propgrid, pane_grid)
+        pane_grid2 = aui.AuiPaneInfo().Name("propgrid2").Caption("PropGridi2")\
+                .DestroyOnClose(False).Dockable().MinimizeButton(True).MaximizeButton(True)\
+                .Bottom().BestSize(400, 300)
+
+        self._mgr.AddPane(self.propgrid2, pane_grid2)
         ns = {}
         ns['wx'] = wx
         ns['app'] = wx.GetApp()
