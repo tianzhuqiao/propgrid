@@ -794,7 +794,7 @@ class PropGrid(wx.ScrolledWindow):
             prop.OnMouseMove(pt)
 
         # drag & drop
-        if evt.LeftIsDown() and PropGrid.drag_prop and\
+        if evt.LeftIsDown() and PropGrid.drag_prop  and PropGrid.drag_pg == self and\
            PropGrid.drag_state == 1:
             pt = self.ClientToScreen(pt)
             start = PropGrid.drag_start
@@ -993,6 +993,7 @@ class PropSettings(wx.Dialog):
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
         self.propgrid = PropGrid(self).Configurable(False)
+        self.propgrid.Draggable(False)
         self.propgrid.GetArtProvider().SetTitleWidth(200)
         self.prop = prop
         if prop.IsSeparator():
