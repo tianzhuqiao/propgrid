@@ -69,7 +69,10 @@ class PropGeneric(PropBase):
         self.parent = -1
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
-        self.min_size = wx.Size(200, 25)
+        if wx.Platform == '__WXMSW__':
+            self.min_size = wx.Size(200, 35)
+        else:
+            self.min_size = wx.Size(200, 25)
         self.rect = wx.Rect(0, 0, 0, 0)
         # non-overlapping regions
         self.regions = {
@@ -959,15 +962,15 @@ class PropEditBox(PropControl):
         if self.formatter:
             validator = TextValidator(self, 'value', self.formatter, False, None)
             win.SetValidator(validator)
-            if style & wx.TE_PROCESS_ENTER:
-                win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
+        if style & wx.TE_PROCESS_ENTER:
+            win.Bind(wx.EVT_TEXT_ENTER, self.OnPropTextEnter)
 
         return win
 
     def OnPropTextEnter(self, evt):
         """send when the enter key is pressed in the property control window"""
         if self.window:
-            self.OnTextEnter()
+            wx.CallAfter(self.OnTextEnter)
 
     def doGetValueFromWin(self):
         """update the value"""

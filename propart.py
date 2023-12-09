@@ -6,7 +6,11 @@ class PropArtNative(object):
         self.margin = {'top': 0, 'bottom': 0, 'left': 0, 'right': 0}
         self.gap_x = 2
         self.title_width = 150
-        self.expansion_width = 12
+        if wx.Platform == '__WXMSW__':
+            # on windows, the icon will not show correctly if size is too small
+            self.expansion_width = 16
+        else:
+            self.expansion_width = 12
         self.splitter_width = 8
         self.indent_width = 28
         self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
