@@ -44,14 +44,14 @@ class PropDropTarget(wx.DropTarget):
 
 
 class PropGrid(wx.ScrolledWindow):
-    ID_PROP_GRID_ADD_SEP = wx.NewId()
-    ID_PROP_GRID_READ_ONLY = wx.NewId()
-    ID_PROP_GRID_INDENT_INS = wx.NewId()
-    ID_PROP_GRID_INDENT_DES = wx.NewId()
-    ID_PROP_GRID_MOVE_UP = wx.NewId()
-    ID_PROP_GRID_MOVE_DOWN = wx.NewId()
-    ID_PROP_GRID_DELETE = wx.NewId()
-    ID_PROP_GRID_PROP = wx.NewId()
+    ID_PROP_GRID_ADD_SEP = wx.NewIdRef()
+    ID_PROP_GRID_READ_ONLY = wx.NewIdRef()
+    ID_PROP_GRID_INDENT_INS = wx.NewIdRef()
+    ID_PROP_GRID_INDENT_DES = wx.NewIdRef()
+    ID_PROP_GRID_MOVE_UP = wx.NewIdRef()
+    ID_PROP_GRID_MOVE_DOWN = wx.NewIdRef()
+    ID_PROP_GRID_DELETE = wx.NewIdRef()
+    ID_PROP_GRID_PROP = wx.NewIdRef()
 
     drag_state = 0
     drag_start = wx.Point(0, 0)
@@ -622,8 +622,9 @@ class PropGrid(wx.ScrolledWindow):
         elif eid == self.ID_PROP_GRID_MOVE_DOWN:
             self.MoveProperty(prop, 2)
         elif eid == self.ID_PROP_GRID_ADD_SEP:
-            prop = PropSeparator().Label('Separator')
-            self.Insert(prop)
+            idx = self.Index(prop)
+            sep = PropSeparator().Label('Separator')
+            self.Insert(sep, idx+1)
 
     def OnKeyDown(self, evt):
         """key down event"""
