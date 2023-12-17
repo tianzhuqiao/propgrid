@@ -754,6 +754,12 @@ class PropControl(PropGeneric):
     def __del__(self):
         self.DestroyControl()
 
+    def duplicate(self):
+        # destroy the window, otherwise the copy will also point to the same window
+        self.UpdatePropValue()
+        self.DestroyControl()
+        return super().duplicate()
+
     def Editing(self, enable):
         self.SetEditting(enable)
         return self
