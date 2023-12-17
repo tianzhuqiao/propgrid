@@ -761,6 +761,12 @@ class PropGrid(wx.ScrolledWindow):
         self.pos_mouse_down = wx.Point(0, 0)
         self.resize_mode = self.RESIZE_NONE
 
+        if PropGrid.drag_state == 1:
+            # cancel drag
+            PropGrid.drag_start = wx.Point(0, 0)
+            PropGrid.drag_prop = None
+            PropGrid.drag_pg = None
+            PropGrid.drag_state = 0
         evt.Skip()
 
     def _set_capture(self, capture=True):
@@ -799,7 +805,10 @@ class PropGrid(wx.ScrolledWindow):
            PropGrid.drag_state == 1:
             pt = self.ClientToScreen(pt)
             start = PropGrid.drag_start
-            if (start.x - pt.x)**2 + (start.y - pt.y)**2 > 10:
+
+            drag_x_threshold = max(10, wx.SystemSettings.GetMetric(wx.SYS_DRAG_X))
+            drag_y_threshold = max(4, wx.SystemSettings.GetMetric(wx.SYS_DRAG_Y))
+            if abs(start.x - pt.x) > drag_x_threshold or abs(start.y - pt.y) > drag_y_threshold:
                 if self.SendPropEvent(wxEVT_PROP_BEGIN_DRAG, self.drag_prop):
                     # the mouse is moved, so start drag & drop
                     PropGrid.drag_state = 2
