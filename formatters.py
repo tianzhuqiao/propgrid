@@ -96,7 +96,7 @@ class ChoiceFormatter(Formatter):
 
     def format(self, value):
         """Format a value for presentation in the UI."""
-        return self.mapping[value]
+        return str(self.mapping[value])
 
     def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
@@ -140,7 +140,7 @@ class EnumFormatter(Formatter):
 
     def format(self, value):
         """Format a value for presentation in the UI."""
-        return self.enumeration[value]
+        return str(self.enumeration[value])
 
     def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
@@ -300,7 +300,7 @@ class BinFormatter(IntFormatter):
 
 class BoolFormatter(IntFormatter):
     def format(self, value):
-        return str(bool(value))
+        return str(bool(int(value)))
 
     def coerce(self, str_value):
         str_value = str_value.strip()

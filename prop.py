@@ -754,6 +754,12 @@ class PropControl(PropGeneric):
     def __del__(self):
         self.DestroyControl()
 
+    def copy(self, p):
+        # destroy the window, otherwise the copy will also point to the same window
+        self.UpdatePropValue()
+        self.DestroyControl()
+        return super().copy(p)
+
     def duplicate(self):
         # destroy the window, otherwise the copy will also point to the same window
         self.UpdatePropValue()
@@ -1053,7 +1059,7 @@ class PropRadioBox(PropControl):
             return self.window
         choices = []
         if self.formatter and hasattr(self.formatter, 'validValues'):
-            choices = [x[1] for x in self.formatter.validValues()]
+            choices = [str(x[1]) for x in self.formatter.validValues()]
 
         win = wx.RadioBox(self.grid, wx.ID_ANY, "", wx.DefaultPosition,
                           wx.DefaultSize, choices, 5, wx.RA_SPECIFY_COLS)
