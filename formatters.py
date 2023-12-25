@@ -96,11 +96,11 @@ class ChoiceFormatter(Formatter):
 
     def format(self, value):
         """Format a value for presentation in the UI."""
-        return str(self.mapping[value])
+        return str(self.mapping.get(value, ''))
 
     def coerce(self, str_value):
         """Convert a string from the UI into a storable value."""
-        return self.mapping_reverse[str_value]
+        return self.mapping_reverse.get(str_value, '')
 
 
 class EnumFormatter(Formatter):
