@@ -1,5 +1,6 @@
 import sys
 import traceback
+import math
 import six
 import wx
 import wx.py.dispatcher as dp
@@ -305,17 +306,17 @@ class PropGrid(wx.ScrolledWindow):
         # translate to the scrolled position
         rc_prop.x, rc_prop.y = self.CalcScrolledPosition(rc_prop.x, rc_prop.y)
         _, y = self.GetViewStart()
-        rc = self.GetRect()
+        rc = self.GetClientRect()
         if rc.top < rc_prop.top and rc.bottom > rc_prop.bottom:
             # if the prop is visible, simply return
             return
         if rc.top > rc_prop.top:
             # if the prop is on top of the client window, scroll up
-            y = y + ((rc_prop.top - rc.top) / self.SCROLL_UNIT)
+            y = y + math.floor((rc_prop.top - rc.top) / self.SCROLL_UNIT)
             self.Scroll(-1, y)
         elif rc.bottom < rc_prop.bottom:
             # if the prop is under bottom of the client window, scroll down
-            y = y + ((rc_prop.bottom - rc.bottom) / self.SCROLL_UNIT)
+            y = y + math.ceil((rc_prop.bottom - rc.bottom) / self.SCROLL_UNIT)
             self.Scroll(-1, y)
 
     def GetSelection(self):
