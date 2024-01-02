@@ -98,8 +98,15 @@ class PropGeneric(PropBase):
         self.top_value_border = False
         self.bottom_value_border = False
 
+    def _prepare_copy(self):
+        pass
+
     def copy(self, p):
         assert isinstance(p, PropGeneric)
+
+        p._prepare_copy()
+        self._prepare_copy()
+
         self.grid = p.grid
         if p.font_label:
             self.font_label = wx.Font(p.font_label)
@@ -108,7 +115,7 @@ class PropGeneric(PropBase):
         self.SetTextColor(p.text_clr, p.text_clr_sel, p.text_clr_disabled, True)
         self.SetBgColor(p.bg_clr, p.bg_clr_sel, p.bg_clr_disabled, True)
         self.data = p.data
-        if p.formatter:
+        if type(self) == type(p) and self.formatter is None and p.formatter:
             self.formatter = copy.copy(p.formatter)
 
         self.name = p.name
@@ -754,11 +761,10 @@ class PropControl(PropGeneric):
     def __del__(self):
         self.DestroyControl()
 
-    def copy(self, p):
+    def _prepare_copy(self):
         # destroy the window, otherwise the copy will also point to the same window
         self.UpdatePropValue()
         self.DestroyControl()
-        return super().copy(p)
 
     def duplicate(self):
         # destroy the window, otherwise the copy will also point to the same window
