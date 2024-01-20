@@ -6,7 +6,6 @@ import wx
 import wx.py.dispatcher as dp
 from .prop import *
 from .propart import PropArtNative
-from .utility import PopupMenu
 
 wxEVT_PROP_INSERT = wx.NewEventType()
 wxEVT_PROP_DELETE = wx.NewEventType()
@@ -595,7 +594,7 @@ class PropGrid(wx.ScrolledWindow):
             if self.IsConfigurable() and prop.IsConfigurable():
                 # show configuration menu
                 menu = self.GetContextMenu(prop)
-                cmd = PopupMenu(self, menu)
+                cmd = self.GetPopupMenuSelectionFromUser(menu)
                 self.OnProcessCommand(cmd, prop)
         return True
 

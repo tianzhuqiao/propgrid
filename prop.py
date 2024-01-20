@@ -8,7 +8,6 @@ from .validators import *
 from .formatters import *
 from . import formatters as fmt
 from .enumtype import EnumType
-from .utility import PopupMenu
 
 wxEVT_PROP_SELECTED = wx.NewEventType()
 wxEVT_PROP_CHANGING = wx.NewEventType()
@@ -1265,7 +1264,7 @@ class PropDateTime(PropControl):
         menu = wx.Menu()
         date = menu.Append(wx.ID_ANY, 'Update date')
         time = menu.Append(wx.ID_ANY, 'Update time')
-        cmd = PopupMenu(self.grid, menu)
+        cmd = self.GetPopupMenuSelectionFromUser(menu)
         win = None
         if cmd == time.GetId():
             win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)
