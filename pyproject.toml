@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=67.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "propgrid"
+version = "0.1.0"
+authors = [
+  { name="Tianzhu Qiao", email="tq@feiyilin.com" },
+]
+license = {file = "LICENSE"}
+description="A lightweight propgrid in wxpython to show/config data"
+readme = "README.md"
+requires-python = ">=3.0"
+classifiers = [
+    "Operating System :: OS Independent",
+]
+dependencies = [
+          'wxpython>=4.2.1'
+      ]
+
+[project.urls]
+"Homepage" = "https://github.com/tianzhuqiao/propgrid"
+
+[tool.setuptools.packages]
+find = {}
+

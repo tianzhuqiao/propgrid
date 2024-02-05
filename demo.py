@@ -2,12 +2,12 @@ import numpy as np
 import wx
 from wx.lib.agw import aui
 from wx import py
-from .prop import *
-from . import propgrid as pg
-from . import formatters as fmt
-from . import enumtype
-from . import propart as pa
-from .propxpm import radio_xpm, tree_xpm
+from propgrid.prop import *
+from propgrid import propgrid as pg
+from propgrid import formatters as fmt
+from propgrid import enumtype
+from propgrid import propart as pa
+from propgrid.propxpm import radio_xpm, tree_xpm
 
 
 def BitmapFromXPM(xpm):
