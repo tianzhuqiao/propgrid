@@ -705,6 +705,27 @@ class PropGeneric(PropBase):
         ht = self.HitTest(pt)
         return ht
 
+    def OnKeyDown(self, evt):
+        keycode = evt.GetKeyCode()
+        if keycode == wx.WXK_LEFT:
+            if evt.CmdDown():
+                # Ctrl + Left decrease the indent
+                self.SetIndent(self.indent - 1)
+            else:
+                # Left hide children
+                self.SetExpand(False)
+            return True
+
+        if keycode == wx.WXK_RIGHT:
+            if evt.CmdDown():
+                # Ctrl + Right increase the indent
+                self.SetIndent(self.indent + 1)
+            else:
+                # Right show children
+                self.SetExpand(True)
+            return True
+        return False
+
     def SendPropEvent(self, event):
         """ send property grid event to parent"""
         win = self.GetGrid()
@@ -856,6 +877,18 @@ class PropControl(PropGeneric):
                 self.DestroyControl()
 
         return super().OnMouseRightClick(pt)
+
+    def OnKeyDown(self, evt):
+        if super().OnKeyDown(evt):
+            return True
+        keycode = evt.GetKeyCode()
+        if keycode == wx.WXK_SPACE:
+            self.CreateControl()
+            return True
+        if keycode == wx.WXK_ESCAPE:
+            self.OnTextEnter()
+            return True
+        return False
 
     def OnTextEnter(self):
         self.UpdatePropValue()
@@ -1264,7 +1297,7 @@ class PropDateTime(PropControl):
         menu = wx.Menu()
         date = menu.Append(wx.ID_ANY, 'Update date')
         time = menu.Append(wx.ID_ANY, 'Update time')
-        cmd = self.GetPopupMenuSelectionFromUser(menu)
+        cmd = self.grid.GetPopupMenuSelectionFromUser(menu)
         win = None
         if cmd == time.GetId():
             win = wx.adv.TimePickerCtrl(self.grid, wx.ID_ANY)

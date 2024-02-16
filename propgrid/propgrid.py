@@ -104,7 +104,7 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(wx.EVT_LEFT_DCLICK, self.OnMouseDoubleClick)
         self.Bind(wx.EVT_MOTION, self.OnMouseMove)
         self.Bind(wx.EVT_LEAVE_WINDOW, self.OnMouseLeave)
-        self.Bind(wx.EVT_KEY_DOWN, self.OnKeyDown)
+        self.Bind(wx.EVT_CHAR_HOOK, self.OnKeyDown)
         # calling CaptureMouse requires to implement EVT_MOUSE_CAPTURE_LOST
         self.Bind(wx.EVT_MOUSE_CAPTURE_LOST, self.OnMouseCaptureLost)
         self.Bind(wx.EVT_MOUSE_CAPTURE_CHANGED, self.OnMouseCaptureLost)
@@ -630,44 +630,34 @@ class PropGrid(wx.ScrolledWindow):
         """key down event"""
         prop = self.prop_selected
         skip = True
+        keycode = evt.GetKeyCode()
         if prop:
-            skip = False
             index = self.GetSelection()
-            keycode = evt.GetKeyCode()
             indent = prop.GetIndent()
-            if keycode == wx.WXK_LEFT:
-                if evt.CmdDown():
-                    # Ctrl + Left decrease the indent
-                    prop.SetIndent(indent - 1)
-                else:
-                    # Left hide children
-                    prop.SetExpand(False)
-            elif keycode == wx.WXK_UP:
-                if evt.CmdDown():
-                    # Ctrl + Up move up
-                    self.MovePropertyUp(index)
-                else:
-                    # Up select the above property
-                    self.NavigateProp(False)
-            elif keycode == wx.WXK_RIGHT:
-                if evt.CmdDown():
-                    # Ctrl + Right increase the indent
-                    prop.SetIndent(indent + 1)
-                else:
-                    # Right show children
-                    prop.SetExpand(True)
-            elif keycode == wx.WXK_DOWN:
-                if evt.CmdDown():
-                    # Ctrl + Down move the property down
-                    self.MovePropertyDown(index)
-                else:
-                    # Down select the property below
-                    self.NavigateProp(True)
-            elif keycode == wx.WXK_DELETE:
-                # delete the property
-                self.Remove(self.GetSelected())
-            else:
-                skip = True
+            if self.HasFocus():
+                if prop.OnKeyDown(evt):
+                    # the prop has process the event
+                    skip = False
+                elif keycode == wx.WXK_UP:
+                    if evt.CmdDown():
+                        # Ctrl + Up move up
+                        self.MovePropertyUp(index)
+                    else:
+                        # Up select the above property
+                        self.NavigateProp(False)
+                    skip = False
+                elif keycode == wx.WXK_DOWN:
+                    if evt.CmdDown():
+                        # Ctrl + Down move the property down
+                        self.MovePropertyDown(index)
+                    else:
+                        # Down select the property below
+                        self.NavigateProp(True)
+                    skip = False
+                elif keycode == wx.WXK_DELETE:
+                    # delete the property
+                    self.Remove(self.GetSelected())
+                    skip = False
         if skip:
             evt.Skip()
 

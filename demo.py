@@ -1,6 +1,8 @@
+import ctypes
 import numpy as np
 import wx
-from wx.lib.agw import aui
+#from wx.lib.agw import aui
+import aui2 as aui
 from wx import py
 from propgrid.prop import *
 from propgrid import propgrid as pg
@@ -9,6 +11,10 @@ from propgrid import enumtype
 from propgrid import propart as pa
 from propgrid.propxpm import radio_xpm, tree_xpm
 
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(True)
+except:
+    pass
 
 def BitmapFromXPM(xpm):
     xpm_b = [x.encode('utf-8') for x in xpm]
