@@ -355,7 +355,23 @@ class PropGrid(wx.ScrolledWindow):
             return
 
         # calculate the new position
-        index2 = index + step
+        index2 = index
+        # move up
+        while step < 0 and index2 >= 1:
+           index2 -= 1
+           p = self.Get(index2)
+           if p.IsVisible():
+               step += 1
+
+        # move down
+        while step > 0 and index2 < self.GetCount()-1:
+            index2 += 1
+            p = self.Get(index2)
+            if p.IsVisible():
+                step -= 1
+
+        index2 += step
+
         if index2 < 0:
             index2 = 0
         # move the prop, prop will be placed on top of index2
@@ -618,9 +634,9 @@ class PropGrid(wx.ScrolledWindow):
         elif eid == self.ID_PROP_GRID_INDENT_DES:
             prop.SetIndent(prop.GetIndent() - 1)
         elif eid == self.ID_PROP_GRID_MOVE_UP:
-            self.MoveProperty(prop, -1)
+            self.MovePropertyUp(prop)
         elif eid == self.ID_PROP_GRID_MOVE_DOWN:
-            self.MoveProperty(prop, 2)
+            self.MovePropertyDown(prop)
         elif eid == self.ID_PROP_GRID_ADD_SEP:
             idx = self.Index(prop)
             sep = PropSeparator().Label('Separator')
@@ -905,6 +921,8 @@ class PropGrid(wx.ScrolledWindow):
         pt = self.CalcUnscrolledPosition(pt)
         index2 = self.PropHitTest(pt)
         prop = self.Get(index2)
+        if not self.SendPropEvent(wxEVT_PROP_DROP, prop):
+            return
         # insert a property? Let the parent to determine what to do
         if PropGrid.drag_prop is None:
             dp.send('prop.drop', index=index2, prop=name, grid=self)
