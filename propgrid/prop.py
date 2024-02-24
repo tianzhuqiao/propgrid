@@ -253,7 +253,7 @@ class PropGeneric(PropBase):
         """get the label tip"""
         if self.label_tip:
             return self.label_tip
-        return self.GetName()
+        return self.GetLabel()
 
     def LabelFont(self, font, silent=False):
         self.SetLabelFont(font, silent)
