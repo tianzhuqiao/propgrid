@@ -431,14 +431,14 @@ class PropGrid(wx.ScrolledWindow):
         # original prop will not affect the position of the new copy.
         self.MoveProperty(prop, -1)
 
-    def SendPropEvent(self, event, prop=None):
+    def SendPropEvent(self, event, prop=None, **kwargs):
         """send the property event to the parent"""
         prop = self.Get(prop)
         # prepare the event
         if isinstance(event, PropEvent):
             evt = event
         elif isinstance(event, int):
-            evt = PropEvent(event, prop)
+            evt = PropEvent(event, prop, **kwargs)
         else:
             raise ValueError()
 
@@ -647,7 +647,7 @@ class PropGrid(wx.ScrolledWindow):
         prop = self.prop_selected
         skip = True
         keycode = evt.GetKeyCode()
-        if prop:
+        if prop and self.SendPropEvent(wxEVT_PROP_KEYDOWN, prop, keycode=keycode):
             index = self.GetSelection()
             indent = prop.GetIndent()
             if self.HasFocus():
@@ -672,7 +672,7 @@ class PropGrid(wx.ScrolledWindow):
                     skip = False
                 elif keycode == wx.WXK_DELETE:
                     # delete the property
-                    self.Remove(self.GetSelected())
+                    self.Delete(self.GetSelected())
                     skip = False
         if skip:
             evt.Skip()

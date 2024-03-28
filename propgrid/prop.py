@@ -750,10 +750,11 @@ class PropGeneric(PropBase):
         pass
 
 class PropEvent(wx.PyCommandEvent):
-    def __init__(self, commandType, prop, id=0):
+    def __init__(self, commandType, prop, id=0, **kwargs):
         wx.PyCommandEvent.__init__(self, commandType, id)
         self.prop = prop
         self.veto = False
+        self.data = kwargs
 
     def GetProp(self):
         """return the attached Property"""
@@ -771,6 +772,9 @@ class PropEvent(wx.PyCommandEvent):
     def GetVeto(self):
         """return whether the event is refused"""
         return self.veto
+
+    def GetData(self):
+        return self.data
 
 class PropControl(PropGeneric):
     def __init__(self, *args, **kwargs):
