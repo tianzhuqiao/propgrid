@@ -133,7 +133,7 @@ class PropGrid(wx.ScrolledWindow):
         w = min(500, w-100)
 
         scale_factor = self.GetContentScaleFactor()
-        bitmap = wx.Bitmap(w*scale_factor, h*scale_factor)
+        bitmap = wx.Bitmap(int(w*scale_factor), int(h*scale_factor))
         bitmap.SetScaleFactor(scale_factor)
         memory.SelectObject(bitmap)
 
@@ -311,11 +311,11 @@ class PropGrid(wx.ScrolledWindow):
             return
         if rc.top > rc_prop.top:
             # if the prop is on top of the client window, scroll up
-            y = y + math.floor((rc_prop.top - rc.top) / self.SCROLL_UNIT)
+            y = y + (rc_prop.top - rc.top) // self.SCROLL_UNIT
             self.Scroll(-1, y)
         elif rc.bottom < rc_prop.bottom:
             # if the prop is under bottom of the client window, scroll down
-            y = y + math.ceil((rc_prop.bottom - rc.bottom) / self.SCROLL_UNIT)
+            y = y + (rc_prop.bottom - rc.bottom) // self.SCROLL_UNIT
             self.Scroll(-1, y)
 
     def GetSelection(self):
@@ -968,9 +968,9 @@ class PropGrid(wx.ScrolledWindow):
         if rc.Contains(pt):
             (x, y) = self.GetViewStart()
             if pt.y < 15:
-                self.Scroll(-1, y - (15 - pt.y) / 3)
+                self.Scroll(-1, y - (15 - pt.y) // 3)
             if pt.y > rc.bottom - 15:
-                self.Scroll(-1, y - (rc.bottom - 15 - pt.y) / 3)
+                self.Scroll(-1, y - (rc.bottom - 15 - pt.y) // 3)
 
         if self.drag_image:
             self.drag_image.Hide()
@@ -1071,6 +1071,15 @@ class PropSettings(wx.Dialog):
 
         # Connect Events
         self.Bind(wx.EVT_BUTTON, self.OnBtnOk, id=wx.ID_OK)
+        self.Bind(EVT_PROP_KEYDOWN, self.OnPropKeyDown)
+
+    def OnPropKeyDown(self, event):
+        data = event.GetData()
+        keycode = data.get('keycode', '')
+        if keycode in [wx.WXK_UP, wx.WXK_DOWN] and not wx.GetKeyState(wx.WXK_COMMAND):
+            # only allow up/down
+            return
+        event.Veto()
 
     def OnBtnOk(self, event):
         if self.propgrid.prop_selected:

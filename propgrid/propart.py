@@ -167,7 +167,7 @@ class PropArtNative(object):
         dc.SetClippingRegion(rc)
         (w, h) = dc.GetTextExtent(p.label)
 
-        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h) / 2)
+        dc.DrawText(p.label, rc.x, rc.y + (rc.height - h) // 2)
         p.show_label_tips = w > rc.width
         dc.DestroyClippingRegion()
 
@@ -217,7 +217,7 @@ class PropArtNative(object):
             value = p.GetValueAsString()
             (w, h) = dc.GetTextExtent(value)
             dc.SetClippingRegion(rc)
-            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h) / 2)
+            dc.DrawText(value, rc.x + 5, rc.top + (rc.height - h) // 2)
             p.show_value_tips = rc.width < w
             dc.DestroyClippingRegion()
 
@@ -225,8 +225,8 @@ class PropArtNative(object):
         if self.expansion_width > 0 and p.HasChildren():
             w, h = self.expansion_width, self.expansion_width
             rc = p.regions['expander']
-            x = rc.x + (rc.width - w) / 2
-            y = rc.y + (rc.height - h) / 2 + 1
+            x = rc.x + (rc.width - w) // 2
+            y = rc.y + (rc.height - h) // 2 + 1
             dc.SetPen(wx.Pen(wx.BLACK))
             dc.SetBrush(wx.BLACK_BRUSH)
             render = wx.RendererNative.Get()
