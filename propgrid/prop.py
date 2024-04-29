@@ -65,7 +65,7 @@ class PropGeneric(PropBase):
         self.visible = True
         self.readonly = False
         #self.window = None
-        self.parent = -1
+        self.parent = None
         self.SetTextColor(silent=True)
         self.SetBgColor(silent=True)
         if wx.Platform == '__WXMSW__':
@@ -293,6 +293,12 @@ class PropGeneric(PropBase):
     def IsVisible(self):
         """return true if the property is visible"""
         return self.visible
+
+    def IsShown(self):
+        parent = self.GetParent()
+        if parent is not None:
+            return self.IsVisible() and parent.IsExpanded() and parent.IsShown()
+        return self.IsVisible()
 
     def Parent(self, prop):
         """set the parent property"""

@@ -358,16 +358,16 @@ class PropGrid(wx.ScrolledWindow):
         index2 = index
         # move up
         while step < 0 and index2 >= 1:
-           index2 -= 1
-           p = self.Get(index2)
-           if p.IsVisible():
-               step += 1
+            index2 -= 1
+            p = self.Get(index2)
+            if p.IsShown():
+                step += 1
 
         # move down
         while step > 0 and index2 < self.GetCount()-1:
             index2 += 1
             p = self.Get(index2)
-            if p.IsVisible():
+            if p.IsShown():
                 step -= 1
 
         index2 += step
@@ -464,7 +464,7 @@ class PropGrid(wx.ScrolledWindow):
                 break
 
             prop = self._props[sel]
-            if prop.IsVisible():
+            if prop.IsShown():
                 self.SetSelection(sel)
                 self.EnsureVisible(sel)
                 break
@@ -473,7 +473,7 @@ class PropGrid(wx.ScrolledWindow):
         """find the property under the mouse"""
         for i, prop in enumerate(self._props):
             prop = self._props[i]
-            if not prop.IsVisible():
+            if not prop.IsShown():
                 continue
             if prop.GetRect().Contains(pt):
                 return i
@@ -487,7 +487,7 @@ class PropGrid(wx.ScrolledWindow):
         self.CheckProp()
         # calculate the width and height
         for p in self._props:
-            if p.IsVisible():
+            if p.IsShown():
                 sz = p.GetMinSize()
                 w = max(w, sz.x)
                 h = h + sz.y
@@ -499,7 +499,7 @@ class PropGrid(wx.ScrolledWindow):
         rc = self.GetClientRect()
         w, y = max(w, rc.width), 1
         for p in self._props:
-            if p.IsVisible():
+            if p.IsShown():
                 h = p.GetMinSize().y
                 p.SetRect(wx.Rect(0, y, w, h))
                 # let art provider update drawing regions (e.g., value rect)
@@ -507,7 +507,7 @@ class PropGrid(wx.ScrolledWindow):
                 y += h
         prev_prop = None
         for p in self._props:
-            if not  p.IsVisible():
+            if not p.IsShown():
                 continue
             p.top_value_border = False
             if prev_prop is None or prev_prop.IsSeparator() or p.IsSeparator():
@@ -516,7 +516,7 @@ class PropGrid(wx.ScrolledWindow):
 
         next_prop = None
         for p in reversed(self._props):
-            if not  p.IsVisible():
+            if not p.IsShown():
                 continue
             p.bottom_value_border = False
             if next_prop is None or next_prop.IsSeparator() or p.IsSeparator():
@@ -551,17 +551,6 @@ class PropGrid(wx.ScrolledWindow):
             # the current one does not have children yet; will be set by its
             # children
             prop.SetHasChildren(False, True)
-
-        # show/hide the properties
-        for prop in self._props:
-            parent = prop.GetParent()
-            if not parent:
-                # always show prop without parent
-                show = True
-            else:
-                # prop with parent depends on parent's status
-                show = parent.IsExpanded() and parent.IsVisible()
-            prop.SetVisible(show)
 
     def OnPropRefresh(self, evt):
         """refresh the property, for example, due to value changed"""
@@ -650,30 +639,29 @@ class PropGrid(wx.ScrolledWindow):
         if prop and self.SendPropEvent(wxEVT_PROP_KEYDOWN, prop, keycode=keycode):
             index = self.GetSelection()
             indent = prop.GetIndent()
-            if self.HasFocus():
-                if prop.OnKeyDown(evt):
-                    # the prop has process the event
-                    skip = False
-                elif keycode == wx.WXK_UP:
-                    if evt.CmdDown():
-                        # Ctrl + Up move up
-                        self.MovePropertyUp(index)
-                    else:
-                        # Up select the above property
-                        self.NavigateProp(False)
-                    skip = False
-                elif keycode == wx.WXK_DOWN:
-                    if evt.CmdDown():
-                        # Ctrl + Down move the property down
-                        self.MovePropertyDown(index)
-                    else:
-                        # Down select the property below
-                        self.NavigateProp(True)
-                    skip = False
-                elif keycode == wx.WXK_DELETE:
-                    # delete the property
-                    self.Delete(self.GetSelected())
-                    skip = False
+            if prop.OnKeyDown(evt):
+                # the prop has process the event
+                skip = False
+            elif keycode == wx.WXK_UP:
+                if evt.CmdDown():
+                    # Ctrl + Up move up
+                    self.MovePropertyUp(index)
+                else:
+                    # Up select the above property
+                    self.NavigateProp(False)
+                skip = False
+            elif keycode == wx.WXK_DOWN:
+                if evt.CmdDown():
+                    # Ctrl + Down move the property down
+                    self.MovePropertyDown(index)
+                else:
+                    # Down select the property below
+                    self.NavigateProp(True)
+                skip = False
+            elif keycode == wx.WXK_DELETE:
+                # delete the property
+                self.Delete(self.GetSelected())
+                skip = False
         if skip:
             evt.Skip()
 
@@ -699,7 +687,7 @@ class PropGrid(wx.ScrolledWindow):
 
         # draw the properties
         for p in self._props:
-            if not p.IsVisible():
+            if not p.IsShown():
                 continue
             rc_prop = p.GetRect()
             if rc.Intersects(rc_prop):
