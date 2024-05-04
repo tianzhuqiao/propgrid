@@ -94,6 +94,7 @@ class PropGrid(wx.ScrolledWindow):
 
         self.drag_image = None
         self.drag_bitmap = None
+        self.edit_mode = True
 
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -123,7 +124,7 @@ class PropGrid(wx.ScrolledWindow):
         self.Bind(EVT_PROP_REFRESH, self.OnPropRefresh)
         self.Bind(EVT_PROP_DROP, self.OnPropEventsHandler)
         self.Bind(EVT_PROP_BEGIN_DRAG, self.OnPropEventsHandler)
-        self.Bind(wx.EVT_MENU, self.OnProcessCommand)
+        #self.Bind(wx.EVT_MENU, self.OnProcessCommand)
         self.SetBackgroundStyle(wx.BG_STYLE_PAINT)
 
     def CreateDragImage(self, prop):
@@ -157,6 +158,19 @@ class PropGrid(wx.ScrolledWindow):
     def GetArtProvider(self):
         return self._art
 
+    def EditMode(self, enable):
+        """set if it is allow to edit the propgrid"""
+        self.SetEditMode(enable)
+        return self
+
+    def SetEditMode(self, enable):
+        """set if it is allow to edit the propgrid"""
+        self.edit_mode = enable
+
+    def GetEditMode(self):
+        """get if it is allow to edit the propgrid"""
+        return self.edit_mode
+
     def Draggable(self, draggable):
         """set if it is allow to drag/drop any prop"""
         self.SetDraggable(draggable)
@@ -168,7 +182,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def IsDraggable(self):
         """get if it is allow to drag/drop any prop"""
-        return self.draggable
+        return self.draggable and self.GetEditMode()
 
     def Configurable(self, configurable):
         """set if it is allow to drag/drop any prop"""
@@ -181,7 +195,7 @@ class PropGrid(wx.ScrolledWindow):
 
     def IsConfigurable(self):
         """get if it is allow to drag/drop any prop"""
-        return self.configurable
+        return self.configurable and self.GetEditMode()
 
     def Append(self, prop, update=True):
         return self.Insert(prop, -1, update)
@@ -450,9 +464,12 @@ class PropGrid(wx.ScrolledWindow):
         evtHandler.ProcessEvent(evt)
         return not evt.GetVeto()
 
-    def NavigateProp(self, down):
+    def NavigateProp(self, down, loop=False):
         """change the selected property"""
+        if self.GetCount() == 0:
+            return
         sel = self.GetSelection()
+        looped = False
         # find the next visible property and activate it
         while True:
             if down:
@@ -461,7 +478,12 @@ class PropGrid(wx.ScrolledWindow):
                 sel -= 1
 
             if sel < 0 or sel >= self.GetCount():
-                break
+                if loop and not looped:
+                    sel %= self.GetCount()
+                    # to avoid loop forever
+                    looped = True
+                else:
+                    break
 
             prop = self._props[sel]
             if prop.IsShown():
@@ -642,8 +664,18 @@ class PropGrid(wx.ScrolledWindow):
             if prop.OnKeyDown(evt):
                 # the prop has process the event
                 skip = False
+            elif keycode == wx.WXK_TAB:
+                prop.Activated(False)
+                if evt.ShiftDown():
+                    # move up
+                    self.NavigateProp(False, loop=True)
+                else:
+                    # move down
+                    self.NavigateProp(True, loop=True)
+                skip = False
             elif keycode == wx.WXK_UP:
-                if evt.CmdDown():
+                prop.Activated(False)
+                if evt.CmdDown() and self.GetEditMode():
                     # Ctrl + Up move up
                     self.MovePropertyUp(index)
                 else:
@@ -651,14 +683,15 @@ class PropGrid(wx.ScrolledWindow):
                     self.NavigateProp(False)
                 skip = False
             elif keycode == wx.WXK_DOWN:
-                if evt.CmdDown():
+                prop.Activated(False)
+                if evt.CmdDown() and self.GetEditMode():
                     # Ctrl + Down move the property down
                     self.MovePropertyDown(index)
                 else:
                     # Down select the property below
                     self.NavigateProp(True)
                 skip = False
-            elif keycode == wx.WXK_DELETE:
+            elif keycode == wx.WXK_DELETE and self.GetEditMode():
                 # delete the property
                 self.Delete(self.GetSelected())
                 skip = False
@@ -999,7 +1032,7 @@ class PropSettings(wx.Dialog):
                            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 
         self.propgrid = PropGrid(self).Configurable(False)
-        self.propgrid.Draggable(False)
+        self.propgrid.EditMode(False)
         self.propgrid.GetArtProvider().SetTitleWidth(200)
         self.prop = prop
         if prop.IsSeparator():
@@ -1059,15 +1092,6 @@ class PropSettings(wx.Dialog):
 
         # Connect Events
         self.Bind(wx.EVT_BUTTON, self.OnBtnOk, id=wx.ID_OK)
-        self.Bind(EVT_PROP_KEYDOWN, self.OnPropKeyDown)
-
-    def OnPropKeyDown(self, event):
-        data = event.GetData()
-        keycode = data.get('keycode', '')
-        if keycode in [wx.WXK_UP, wx.WXK_DOWN] and not wx.GetKeyState(wx.WXK_COMMAND):
-            # only allow up/down
-            return
-        event.Veto()
 
     def OnBtnOk(self, event):
         if self.propgrid.prop_selected:

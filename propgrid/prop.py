@@ -300,6 +300,12 @@ class PropGeneric(PropBase):
             return self.IsVisible() and parent.IsExpanded() and parent.IsShown()
         return self.IsVisible()
 
+    def Show(self):
+        self.Visible(True)
+        if self.GetParent():
+            self.GetParent().Expand(True).Show()
+        return self
+
     def Parent(self, prop):
         """set the parent property"""
         self.SetParent(prop)
@@ -835,9 +841,9 @@ class PropControl(PropGeneric):
     def CreateControl(self):
         """create the control"""
         if self.window is not None:
-            return
+            return False
         if not self.allow_editing:
-            return
+            return False
         win = self.doCreateControl()
 
         if win is not None:
@@ -851,6 +857,8 @@ class PropControl(PropGeneric):
             self.window.SetFocus()
             #self.window.Bind(wx.EVT_KILL_FOCUS, self.OnKillFocus)
             self.draws['value'] = False
+            return True
+        return False
 
     def OnMouseDown(self, pt):
         ht = super().OnMouseDown(pt)
@@ -889,12 +897,13 @@ class PropControl(PropGeneric):
         return super().OnMouseRightClick(pt)
 
     def OnKeyDown(self, evt):
+        if self.window:
+            return False
         if super().OnKeyDown(evt):
             return True
         keycode = evt.GetKeyCode()
         if keycode == wx.WXK_SPACE:
-            self.CreateControl()
-            return True
+            return self.CreateControl()
         if keycode == wx.WXK_ESCAPE:
             self.OnTextEnter()
             return True
