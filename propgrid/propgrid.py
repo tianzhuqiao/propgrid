@@ -674,23 +674,25 @@ class PropGrid(wx.ScrolledWindow):
                     self.NavigateProp(True, loop=True)
                 skip = False
             elif keycode == wx.WXK_UP:
-                prop.Activated(False)
-                if evt.CmdDown() and self.GetEditMode():
-                    # Ctrl + Up move up
-                    self.MovePropertyUp(index)
-                else:
-                    # Up select the above property
-                    self.NavigateProp(False)
-                skip = False
+                if prop.AllowKeyNavigation():
+                    prop.Activated(False)
+                    if evt.CmdDown() and self.GetEditMode():
+                        # Ctrl + Up move up
+                        self.MovePropertyUp(index)
+                    else:
+                        # Up select the above property
+                        self.NavigateProp(False)
+                    skip = False
             elif keycode == wx.WXK_DOWN:
-                prop.Activated(False)
-                if evt.CmdDown() and self.GetEditMode():
-                    # Ctrl + Down move the property down
-                    self.MovePropertyDown(index)
-                else:
-                    # Down select the property below
-                    self.NavigateProp(True)
-                skip = False
+                if prop.AllowKeyNavigation():
+                    prop.Activated(False)
+                    if evt.CmdDown() and self.GetEditMode():
+                        # Ctrl + Down move the property down
+                        self.MovePropertyDown(index)
+                    else:
+                        # Down select the property below
+                        self.NavigateProp(True)
+                    skip = False
             elif keycode == wx.WXK_DELETE and self.GetEditMode():
                 # delete the property
                 self.Delete(self.GetSelected())

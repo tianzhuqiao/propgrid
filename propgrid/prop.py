@@ -482,6 +482,10 @@ class PropGeneric(PropBase):
         """return true if the property has children"""
         return self.has_children
 
+    def AllowKeyNavigation(self):
+        # if allow up/down key to navigate to adjacent prop
+        return True
+
     def Activated(self, activated=True):
         """activate the property"""
         self.SetActivated(activated)
