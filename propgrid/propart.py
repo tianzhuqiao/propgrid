@@ -8,9 +8,9 @@ class PropArtNative(object):
         self.title_width = 150
         if wx.Platform == '__WXMSW__':
             # on windows, the icon will not show correctly if size is too small
-            self.expansion_width = 16
+            self.expansion_width = 13
         else:
-            self.expansion_width = 12
+            self.expansion_width = 9
         self.splitter_width = 8
         self.indent_width = 28
         self._font_label = wx.SystemSettings.GetFont(wx.SYS_DEFAULT_GUI_FONT)
@@ -115,7 +115,7 @@ class PropArtNative(object):
 
         # label
         p.regions['label'] = wx.Rect(*irc)
-        p.regions['label'].x = x + mx * 2
+        p.regions['label'].x = x + mx * 5
 
         if 'value' in p.regions:
             title_width = p.title_width
